@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+# Puma の中で Solid Queue（ジョブと recurring job）も起動する
+ENV["SOLID_QUEUE_IN_PUMA"] ||= "1"
+exec "./bin/rails", "server", "-b", "0.0.0.0", *ARGV

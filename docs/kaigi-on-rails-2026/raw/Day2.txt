@@ -1,0 +1,120 @@
+﻿LT１
+* Leaner
+
+
+LT2
+* Wantedly
+* PostgreSQL -> BigQuery
+* mendy
+
+
+LT3
+* studyplus
+* miko
+
+
+101
+111
+XOR
+010
+
+
+010->
+111
+XNOR だけ変換する
+101
+
+
+matsu
+
+
+* 「」
+* １２言語、２０run, 2set
+* tokenの消費量を見た。Rubyが消費量が少ない。開発時間が短い。最新のモデルは、差が小さい。
+* 実行コストが高い。
+* AI gateとは
+* shipする、とは
+* で開発して、spinelでデプつロイ
+* ラウンドhouseコンパイルとスピネル
+* with outmetaprograming at runtime
+* Compile when shiped
+* 
+
+キュウリの復讐 ：AIコードのための安全ネット​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​
+* SCI FI bcn
+* sparkle 介護システム。
+* https://note.shiftinc.jp/n/n1fa2e3780f73
+* デプロイとリリースを切り分ける。
+
+
+ACTIVE AGENT
+
+
+
+
+Action C
+
+
+ableの相
+
+
+手はブラウ
+
+
+ザだけじゃ
+
+
+ない- Rai
+
+
+Isでデバイ
+
+
+ス群を臨時
+
+
+管制する
+
+
+* クライアントが人間ではなく、ラズパイだったら。
+* ラズパイは7割が産業。
+* エッジゲートウェイを作ってみたという話。
+
+
+
+
+* リアルタイムでActuoncavleとTurboをどう切り替えるか。
+* Railsはブラウザだけではない。
+* ActiveJob, 
+
+
+* 制御プレーン
+* Raspy -> rails -> web
+
+
+* 5つのカラム。
+* Turbo STREAMSは、Hotwire
+* ３秒に一回、連絡する。
+* 15 deactivate , 60 offline
+* Websocket, ActiveJob
+* 受け口はコネクションで、
+* JOBにUNIQU IDで重複なくす。
+* タスクを渡すと画面のバッチが青く光る。BGは使わず、ジョブを渡す。
+* 4device × 15fpsはTyrboでも行ける。
+* Never let turbo replace the canvas.
+* ラズパイは電源がないと、最後に電源を着けた時間から開始する。
+* NTP
+* 8.0からsolid cable
+* the next fleet of orchestlate
+
+
+valley
+
+
+* Sorted set 爆速
+* ZINCRBY. アクセスランキング
+* ZUNIONSTORE WEIGTH 
+* Valley Search、セマンティックサーチ、RAG, レコメンド。
+
+
+* pines

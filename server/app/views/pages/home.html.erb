@@ -1,0 +1,12 @@
+<div class="stack">
+  <h1>サーバーは起動しています</h1>
+  <p class="muted">セットアップ確認用のページです。管理画面ができたら差し替えます。</p>
+  <div class="card stack">
+    <h2>ロック画面のプレビュー</h2>
+    <div class="cluster">
+      <% LockPreviewsController::THEMES.each do |theme| %>
+        <%= link_to theme, lock_preview_path(theme: theme), class: "button" %>
+      <% end %>
+    </div>
+  </div>
+</div>

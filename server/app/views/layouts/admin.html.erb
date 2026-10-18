@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="<%= content_for(:theme).presence || "default" %>">
+  <head>
+    <title><%= content_for(:title) || "ScreenJail 管理" %></title>
+    <%= render "layouts/head" %>
+    <%= stylesheet_link_tag "tokens", "base", "components", "admin", "data-turbo-track": "reload" %>
+  </head>
+  <body>
+    <header class="admin-header">
+      <strong>ScreenJail</strong>
+      <%= yield :header_actions %>
+    </header>
+    <main class="admin-main">
+      <%= yield %>
+    </main>
+  </body>
+</html>

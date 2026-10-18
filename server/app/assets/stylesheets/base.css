@@ -1,0 +1,18 @@
+/* 全画面共通の最小リセットと基本要素 */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: 1.6;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+h1, h2, h3, p { margin: 0; }
+
+a { color: var(--color-accent); }
+
+button, input, select, textarea { font: inherit; }

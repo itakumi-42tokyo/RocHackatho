@@ -1,0 +1,25 @@
+/*
+ * ロック画面のレイアウト。Android アプリの WebView に全画面で表示される。
+ * 中身は lock/ 配下の partial（スロット）の組み合わせで作る。
+ */
+html, body { height: 100%; overflow: hidden; }
+
+body.lock {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100dvh;
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.lock-top { font-size: var(--text-sm); color: var(--color-muted); letter-spacing: 0.2em; }
+
+.lock-center { display: flex; flex-direction: column; justify-content: center; gap: var(--space-6); }
+
+.lock-title { font-size: var(--text-hero); font-weight: 800; line-height: 1.1; color: var(--color-accent); }
+
+.lock-message { font-size: var(--text-lg); }
+
+.lock-bottom { font-size: var(--text-sm); color: var(--color-muted); }

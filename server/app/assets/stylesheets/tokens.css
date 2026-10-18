@@ -1,0 +1,60 @@
+/*
+ * デザイントークン。色・文字・余白・角丸はここだけで定義し、ほかの CSS は var(--…) で参照する。
+ * テーマは <html data-theme="…"> で切り替える。テーマを足すときはこのファイルにブロックを追加するだけでよい。
+ */
+:root {
+  --font-sans: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 2rem;
+  --text-hero: clamp(2.5rem, 10vw, 5rem);
+
+  /* 既定（管理画面）: 明るいテーマ */
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-text: #1b1d22;
+  --color-muted: #6b7280;
+  --color-border: #e3e5ea;
+  --color-accent: #e11d74;
+  --color-accent-text: #ffffff;
+  --color-online: #16a34a;
+  --color-inactive: #d97706;
+  --color-offline: #9ca3af;
+  --color-danger: #dc2626;
+}
+
+/* ロック画面: 監獄テーマ（既定） */
+[data-theme="jail"] {
+  --color-bg: #0d0f12;
+  --color-surface: #171a1f;
+  --color-text: #f2f3f5;
+  --color-muted: #9aa1ab;
+  --color-border: #2a2f37;
+  --color-accent: #c6f432;
+  --color-accent-text: #0d0f12;
+}
+
+/* ロック画面: Kaigi on Rails 風テーマ */
+[data-theme="kaigi"] {
+  --color-bg: #1e1f1c;
+  --color-surface: #2a2b27;
+  --color-text: #f4f4ef;
+  --color-muted: #a7a89f;
+  --color-border: #3a3b36;
+  --color-accent: #e542a3;
+  --color-accent-text: #ffffff;
+}

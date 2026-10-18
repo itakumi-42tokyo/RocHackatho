@@ -1,0 +1,110 @@
+﻿LT1
+* Mov株式会社
+* DcukDB
+* ブース行く
+
+
+LT2
+* with株式会社
+* Rails Moolith
+
+
+LT3
+* Timee株式会社
+* モジュラーモノリス
+
+
+DHH
+* 「Where the tracks go next.」
+* the best part of japan is japanese.
+* 「if you teleported the japanese to another country, tha country would be Japan. 」
+* Omarcy
+* 「You are ot alone.」
+* Fuji supeed race.
+* 学習は投資である。
+* 「There are decaedes where nothing happenns annd there are weeks where decades happen.」
+* 「Look at the all things I;m not doinng」
+* 「people have their head exploded.」
+* three Emoji.
+* 「前までは、AIに０から作らせるんおは優秀で反なかった。」
+* 「」Tired: writig. Wired: reading.
+* Spinel
+* LightRoom
+* 「Share Liraries. ot Astruct.」
+「In the beginner’s mind thre are many possibility, but expert there a few.」
+
+
+
+
+* S3
+* elasticache
+* opensearch
+* Rails monolith
+Iエージェントのデバッグ能力を向上させよう— I時代にR a i l sが輝く理由​​​​​​​​​​​​
+
+
+* debug MCP, APM
+* 仮説を断定にする。
+* ソースコード上だけではなく、実行環境で証拠をだす。
+* １．Reflection, 2. monolith, 3. Notifications
+* テストの瞬間のプロセスができる。例外ブレイクポイントを立てて、再現がその瞬間でできる。
+* 不可逆や、実行できる環境であるかは人間の判断で。
+
+
+
+
+
+
+Pum aからF a l c o nに移行したR a i l sアプリケーションでの実践​​​​​​​​​​​ 
+* Unicorn, Puma, Falcon
+* Falconは、API待ちの時間をわざと作る。
+* ファイバー対応しないと早くならない。
+* IOがかからない例えば検索APIなどは、CPU効率の改善は見られなかった。
+* Ruby master, PuMaPy
+
+
+
+
+
+
+プロトコルバッファ
+
+
+* シリアライズ
+* JSONは型がなくて困ったことないですか?
+* APIスキーマとは。
+
+
+MINI RAILS
+* request -> Rack -> Router -> Controller ->
+* Minirecord
+
+
+Passkey
+
+
+* Conditional Ui or Paakey 専用ボタン
+* FIDO Aliance.
+* ページを開いたさいに自動入力させるのもどうか。
+* パスキーと2要素認証
+* UVフラグ、ユーザー検証。
+* パスキーの識別の仕方。AAGUID, 128BIT
+* パスキーはWebAuthenにより、複数登録可能にする。
+
+
+REST
+
+
+RESTとは
+* Roy.T.fielding
+* * サーバーとクライアントは表現を送りあっている
+* 自己完結的
+* REST APIはハイパーテキストでなければならない。
+
+
+* JSON APIはRESTfulではない。
+
+
+* Webの成功要因。
+* 1. 新しいものがきたときに、ページを更新する必要がない。
+* MPAとSPA

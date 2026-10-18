@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="<%= content_for(:theme).presence || "jail" %>">
+  <head>
+    <title>LOCKED</title>
+    <%= render "layouts/head" %>
+    <%= stylesheet_link_tag "tokens", "base", "components", "lock", "data-turbo-track": "reload" %>
+  </head>
+  <body class="lock">
+    <%= yield %>
+  </body>
+</html>

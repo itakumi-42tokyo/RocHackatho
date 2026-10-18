@@ -1,0 +1,38 @@
+/* 画面をまたいで使う部品。クラス名は役割で付ける（見た目の名前にしない） */
+.stack { display: flex; flex-direction: column; gap: var(--space-4); }
+.cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.button--primary { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-accent-text); }
+.button--danger { background: var(--color-danger); border-color: var(--color-danger); color: #fff; }
+
+.badge {
+  display: inline-block;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  background: var(--color-border);
+}
+.badge--online { background: var(--color-online); color: #fff; }
+.badge--inactive { background: var(--color-inactive); color: #fff; }
+.badge--offline { background: var(--color-offline); color: #fff; }
+
+.muted { color: var(--color-muted); }
