@@ -1,82 +1,118 @@
 package com.example.screenjail
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.text.InputType
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 
 /**
  * アプリの入口画面。
- * まだサーバーにはつながない。手元でロック画面の表示・非表示だけを試すための最小の画面。
- * 見た目の本体は Rails のページ。ここは LockOverlay を呼び出すだけ。
+ * サーバーに参加（登録）してサービスを開始するほか、手元でロック画面の表示を試すボタンも置く。
+ * ロック画面の見た目の本体は Rails のページ。ここはそれを呼び出すだけ。
  */
 class MainActivity : Activity() {
 
-    private val previewUrl =
-        BuildConfig.DEFAULT_SERVER_URL + "/lock_preview?theme=jail"
+    private lateinit var prefs: android.content.SharedPreferences
+    private lateinit var status: TextView
+    private lateinit var serverUrlField: EditText
+    private lateinit var nameField: EditText
+
+    private val previewUrl get() = BuildConfig.DEFAULT_SERVER_URL + "/lock_preview?theme=jail"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        prefs = getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
+        requestNotificationPermission()
 
-        val hint = TextView(this).apply {
-            text = "ステップ1: 表示の確認\n下のボタンで動きを試せます。"
-            textSize = 16f
-            setPadding(0, 0, 0, 40)
+        status = TextView(this).apply { textSize = 14f; setPadding(0, 0, 0, 24) }
+
+        serverUrlField = EditText(this).apply {
+            inputType = InputType.TYPE_TEXT_VARIATION_URI
+            setText(prefs.getString(Prefs.SERVER_URL, BuildConfig.DEFAULT_SERVER_URL))
+        }
+        nameField = EditText(this).apply {
+            hint = "あなたの名前"
+            setText(prefs.getString(Prefs.DEVICE_NAME, ""))
+        }
+
+        val joinButton = Button(this).apply {
+            text = "サーバーに参加する"
+            setOnClickListener { join() }
         }
 
         val grantButton = Button(this).apply {
-            text = "重ね表示を許可する"
+            text = "重ね表示を許可する（最初に 1 回）"
             setOnClickListener { openOverlaySettings() }
         }
 
+        val sectionTest = TextView(this).apply {
+            text = "── 手元で表示だけ試す ──"
+            setPadding(0, 40, 0, 8)
+        }
         val showButton = Button(this).apply {
             text = "ロック画面を表示"
             setOnClickListener { LockOverlay.show(this@MainActivity, previewUrl, 100) }
         }
-
         val hideButton = Button(this).apply {
             text = "ロック画面を閉じる"
             setOnClickListener { LockOverlay.hide(this@MainActivity) }
         }
-
-        val pinnedButton = Button(this).apply {
-            text = "画面固定ロック（ホーム・タスク管理を無効）"
-            setOnClickListener { startLock(LockActivity.MODE_PINNING) }
-        }
-
         val fullButton = Button(this).apply {
-            text = "最強ロック（画面固定＋重ね表示）"
-            setOnClickListener { startLock(LockActivity.MODE_FULL) }
-        }
-
-        val pinnedHint = TextView(this).apply {
-            text = "どちらも 30 秒で自動解除します（テスト用）。\n" +
-                "手動解除は「戻る」と「タスク管理」を同時に長押し。\n" +
-                "固定が効かないときは 設定→セキュリティ→アプリ固定 を ON に。"
-            textSize = 13f
-            setPadding(0, 16, 0, 0)
+            text = "最強ロックを試す（30 秒で自動解除）"
+            setOnClickListener { startTestLock(LockActivity.MODE_FULL) }
         }
 
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 96, 48, 48)
-            addView(hint)
+            addView(status)
             addView(grantButton)
+            addView(serverUrlField)
+            addView(nameField)
+            addView(joinButton)
+            addView(sectionTest)
             addView(showButton)
             addView(hideButton)
-            addView(pinnedButton)
             addView(fullButton)
-            addView(pinnedHint)
         }
-
         setContentView(layout)
+        updateStatus()
     }
 
-    private fun startLock(mode: String) {
+    private fun join() {
+        val baseUrl = serverUrlField.text.toString().trim().ifBlank { BuildConfig.DEFAULT_SERVER_URL }
+        val name = nameField.text.toString().trim().ifBlank { "名無し端末" }
+        prefs.edit().putString(Prefs.SERVER_URL, baseUrl).putString(Prefs.DEVICE_NAME, name).apply()
+        status.text = "登録中…"
+
+        DeviceRegistrar.register(baseUrl, name) { token, error ->
+            if (token != null) {
+                prefs.edit().putString(Prefs.TOKEN, token).apply()
+                LockService.start(this)
+                updateStatus()
+                Toast.makeText(this, "参加しました", Toast.LENGTH_SHORT).show()
+            } else {
+                status.text = "参加に失敗: $error"
+            }
+        }
+    }
+
+    private fun updateStatus() {
+        val joined = !prefs.getString(Prefs.TOKEN, null).isNullOrBlank()
+        status.text = if (joined) "参加済み。管理者の操作を待っています。" else "未参加です。"
+    }
+
+    private fun startTestLock(mode: String) {
         val intent = Intent(this, LockActivity::class.java).apply {
             putExtra(LockActivity.EXTRA_MODE, mode)
             putExtra(LockActivity.EXTRA_AUTO_RELEASE, 30)
@@ -85,10 +121,16 @@ class MainActivity : Activity() {
     }
 
     private fun openOverlaySettings() {
-        val intent = Intent(
-            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-            Uri.parse("package:$packageName")
+        startActivity(
+            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
         )
-        startActivity(intent)
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
     }
 }

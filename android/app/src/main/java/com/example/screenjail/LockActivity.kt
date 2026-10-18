@@ -27,15 +27,27 @@ class LockActivity : Activity() {
     companion object {
         const val EXTRA_MODE = "mode"
         const val EXTRA_AUTO_RELEASE = "auto_release_seconds"
+        const val EXTRA_URL = "url"
         const val MODE_PINNING = "pinning"
         const val MODE_FULL = "full"
+
+        // サービスからロックを解くために、動いている画面への参照を持つ
+        @Volatile private var instance: LockActivity? = null
+        val isRunning: Boolean get() = instance != null
+
+        fun releaseIfRunning() {
+            instance?.let { activity ->
+                activity.runOnUiThread { activity.releaseLock() }
+            }
+        }
     }
 
     private val handler = Handler(Looper.getMainLooper())
     private val autoRelease = Runnable { releaseLock() }
 
     private val lockUrl: String
-        get() = BuildConfig.DEFAULT_SERVER_URL + "/lock_preview?theme=jail"
+        get() = intent.getStringExtra(EXTRA_URL)
+            ?: (BuildConfig.DEFAULT_SERVER_URL + "/lock_preview?theme=jail")
 
     private val mode: String
         get() = intent.getStringExtra(EXTRA_MODE) ?: MODE_PINNING
@@ -59,10 +71,17 @@ class LockActivity : Activity() {
             loadUrl(lockUrl, mapOf("ngrok-skip-browser-warning" to "1"))
         }
         setContentView(webView)
+        instance = this
 
         // 安全タイマー。指定秒後に必ず解除する（既定 30 秒、0 で無効）
         val seconds = intent.getIntExtra(EXTRA_AUTO_RELEASE, 30)
         if (seconds > 0) handler.postDelayed(autoRelease, seconds * 1000L)
+    }
+
+    override fun onDestroy() {
+        if (instance === this) instance = null
+        handler.removeCallbacks(autoRelease)
+        super.onDestroy()
     }
 
     override fun onResume() {

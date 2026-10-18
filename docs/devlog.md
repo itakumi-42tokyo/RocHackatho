@@ -167,6 +167,17 @@ WebSocket のハンドシェイクを curl で送って確認した。
 
 - **確認**: 端末登録 → ロック（full / 濃さ80 / 文言）→ state 送信 → 脱獄記録 → 解除、まで runner で通ることを確認。Basic 認証（未認証 401 / 認証 200）、ロック画面 200 も確認
 
+### フェーズ 8: Android をサーバーにつなぐ
+- **CableClient**: OkHttp の WebSocket で Action Cable を話す最小クライアント
+  - OkHttp はブラウザではないので Origin を送らない → **自分で `Origin` と `Authorization: Bearer <token>` を付ける**（講演の肝をコードで再現）
+  - subscribe / message(perform) / 受信の振り分け / 指数バックオフ再接続
+- **DeviceRegistrar**: `POST /api/devices` で端末登録し token を受け取る
+- **LockService**（フォアグラウンドサービス, specialUse）: 接続を保ち、3 秒ごとにハートビート＋覆いの報告。届いた `state` を見て overlay / pinning / full を適用、解除なら閉じる
+- **LockActivity**: サービスから解除できるよう静的参照を持たせ、URL を外から渡せるようにした。通信断でも戻れるよう保険の自動解除（180 秒）
+- **MainActivity**: サーバー URL と名前で「参加」→ 登録 → サービス開始。通知権限の取得。手元テスト用ボタンも残す
+- 権限追加: `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_SPECIAL_USE` / `POST_NOTIFICATIONS`
+- **ビルド確認**: `gradlew assembleDebug` 成功（警告のみ）。実機での通し確認は次
+
 ---
 
 ## スクリーンショット・写真

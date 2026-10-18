@@ -1,0 +1,139 @@
+package com.example.screenjail
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import androidx.core.app.NotificationCompat
+import org.json.JSONObject
+
+/**
+ * サーバーとの接続を保ち続けるフォアグラウンドサービス。
+ * ハートビートを送り、届いた状態（locked / mode / opacity）に合わせてロック画面を出し入れする。
+ */
+class LockService : Service(), CableClient.Listener {
+
+    companion object {
+        private const val CHANNEL_ID = "screenjail_service"
+        private const val NOTE_ID = 1
+        private const val HEARTBEAT_MS = 3000L
+        private const val SAFETY_AUTO_RELEASE = 180 // 通信断でも最後は戻れるようにする保険（秒）
+
+        fun start(context: Context) {
+            val intent = Intent(context, LockService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent)
+            else context.startService(intent)
+        }
+    }
+
+    private val main = Handler(Looper.getMainLooper())
+    private var cable: CableClient? = null
+    private var currentlyLocked = false
+
+    private val heartbeat = object : Runnable {
+        override fun run() {
+            cable?.sendHeartbeat()
+            cable?.reportOverlay(LockOverlay.isShown || currentlyLocked)
+            main.postDelayed(this, HEARTBEAT_MS)
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        startForeground(NOTE_ID, buildNotification())
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val prefs = getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
+        val baseUrl = prefs.getString(Prefs.SERVER_URL, BuildConfig.DEFAULT_SERVER_URL)!!
+        val token = prefs.getString(Prefs.TOKEN, null)
+
+        if (token.isNullOrBlank()) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        if (cable == null) {
+            cable = CableClient(baseUrl, token, this).also { it.connect() }
+            main.postDelayed(heartbeat, HEARTBEAT_MS)
+        }
+        return START_STICKY
+    }
+
+    // ---- CableClient.Listener ----
+
+    override fun onState(state: JSONObject) {
+        val baseUrl = getSharedPreferences(Prefs.NAME, MODE_PRIVATE)
+            .getString(Prefs.SERVER_URL, BuildConfig.DEFAULT_SERVER_URL)!!
+        val locked = state.optBoolean("locked", false)
+        val mode = state.optString("mode", "full")
+        val opacity = state.optInt("opacity", 100)
+        val lockUrl = baseUrl.trimEnd('/') + state.optString("lock_path", "/lock")
+
+        currentlyLocked = locked
+        if (locked) applyLock(mode, opacity, lockUrl) else releaseLock()
+    }
+
+    override fun onConnected() {}
+    override fun onDisconnected() {}
+
+    // ---- ロックの適用 ----
+
+    private fun applyLock(mode: String, opacity: Int, lockUrl: String) {
+        when (mode) {
+            "overlay" -> {
+                LockActivity.releaseIfRunning()
+                LockOverlay.show(this, lockUrl, opacity)
+            }
+            "pinning" -> {
+                LockOverlay.hide(this)
+                launchLockActivity(LockActivity.MODE_PINNING, lockUrl)
+            }
+            else -> { // full
+                launchLockActivity(LockActivity.MODE_FULL, lockUrl)
+            }
+        }
+    }
+
+    private fun releaseLock() {
+        LockActivity.releaseIfRunning()
+        LockOverlay.hide(this)
+    }
+
+    private fun launchLockActivity(mode: String, lockUrl: String) {
+        if (LockActivity.isRunning) return
+        val intent = Intent(this, LockActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            putExtra(LockActivity.EXTRA_MODE, mode)
+            putExtra(LockActivity.EXTRA_AUTO_RELEASE, SAFETY_AUTO_RELEASE)
+            putExtra(LockActivity.EXTRA_URL, lockUrl)
+        }
+        startActivity(intent)
+    }
+
+    override fun onDestroy() {
+        main.removeCallbacks(heartbeat)
+        cable?.disconnect()
+        super.onDestroy()
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun buildNotification(): android.app.Notification {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(CHANNEL_ID, "ScreenJail", NotificationManager.IMPORTANCE_LOW)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("ScreenJail")
+            .setContentText("サーバーに接続中")
+            .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setOngoing(true)
+            .build()
+    }
+}
