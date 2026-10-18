@@ -142,6 +142,31 @@ WebSocket のハンドシェイクを curl で送って確認した。
 - AI（Claude）が入口画面のコードを書く途中、安全フィルタに一度止められた。やり方を変えて書き直したら通った
 - AI が書けない部分も、設計（CLAUDE.md）と動いている別ファイルを手がかりに進められた
 
+### フェーズ 7: Rails とつなぐ（管理画面からロックする仕組み）
+- **モデル**: `Device`（name, token, locked, opacity, lock_message, lock_mode, status, last_seen_at, connection_id, locked_at, escape_count, best_escape_seconds）と `DeviceEvent`
+  - `lock_mode` を追加し、ロックの強さ（overlay / pinning / full）を管理者が選べるようにした
+- **API**: `POST /api/devices`（端末登録。name を渡すと token を返す）
+- **ActionCable**
+  - `Connection`: token（`?token=` か `Authorization: Bearer`）から端末を特定。管理画面のブラウザは token なしでも接続できる（Turbo Streams 用）
+  - `DeviceChannel`: 購読時に現在の状態を送る／3 秒ごとのハートビート／「覆いが出ているか」の報告／**自分の接続 ID が今の接続のときだけ offline**（講演の教訓）
+- **管理画面** `/admin`（Basic 認証）: 端末カード、強さ選択、濃さ（不透明度）スライダー、文言、ロック・解除、全員ロック・解除、🏆 脱獄ランキング、ログ。更新は Turbo Streams でリアルタイム反映
+- **ロック画面** `/lock?token=…`: token で端末を特定して描画（Android の WebView が開く）
+- **死活判定** `DeviceStatusSweepJob`（5 秒ごと）: 15 秒で inactive、60 秒で offline。ロック中に offline になったら脱獄として記録
+- **設計の核**: サーバーは「命令」ではなく `state`（locked / mode / opacity / message）を丸ごと送る。取りこぼしても再接続時の再送で追いつく。DB の `devices` が唯一の正
+
+#### 🐛 ハマり 5: 管理画面が 204 No Content になる
+- **症状**: `GET /admin` が 200 ではなく 204、ページが空
+- **原因**: `index.html.erb` を `app/views/admin/` に置いたが、コントローラが `Admin::DevicesController` なので Rails は `app/views/admin/devices/index.html.erb` を探す → テンプレートが見つからず `head :no_content`
+- **対処**: テンプレートを `admin/devices/` に移動 → 200 で表示
+- **学び**: ログの「No template found for … rendering head :no_content」が決め手。名前空間付きコントローラのビューはフォルダ階層に注意
+
+#### 🐛 ハマり 6: `uninitialized constant ApplicationCable::Channel`
+- **症状**: broadcast やチャンネル読み込みで定数未定義エラー
+- **原因**: `app/channels/application_cable/channel.rb`（基底クラス）が無かった
+- **対処**: 基底クラスを作成 → 解消
+
+- **確認**: 端末登録 → ロック（full / 濃さ80 / 文言）→ state 送信 → 脱獄記録 → 解除、まで runner で通ることを確認。Basic 認証（未認証 401 / 認証 200）、ロック画面 200 も確認
+
 ---
 
 ## スクリーンショット・写真

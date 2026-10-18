@@ -1,0 +1,11 @@
+<% if @device %>
+  <%= render "lock/screen",
+        device_name: @device.name,
+        message: @device.lock_message.presence || "Tired: writing. Wired: reading.",
+        theme: @theme %>
+<% else %>
+  <%= render "lock/screen",
+        device_name: "未登録",
+        message: "この端末は登録されていません",
+        theme: @theme %>
+<% end %>

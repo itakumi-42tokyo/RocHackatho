@@ -1,0 +1,13 @@
+<%= tag.div id: "ranking", class: "card stack" do %>
+  <h2>🏆 脱獄ランキング</h2>
+  <% jailbreakers = Device.jailbreakers.limit(5) %>
+  <% if jailbreakers.empty? %>
+    <p class="muted">まだ脱獄者はいません。</p>
+  <% else %>
+    <ol>
+      <% jailbreakers.each do |d| %>
+        <li><%= d.name %> — <%= d.escape_count %> 回<%= " / 最速 #{d.best_escape_seconds}秒" if d.best_escape_seconds %></li>
+      <% end %>
+    </ol>
+  <% end %>
+<% end %>

@@ -1,0 +1,32 @@
+<% content_for :title, "ScreenJail 管理" %>
+<% content_for :header_actions do %>
+  <div class="cluster">
+    <%= button_to "全員ロック", lock_all_admin_devices_path, class: "button button--primary" %>
+    <%= button_to "全員解除", unlock_all_admin_devices_path, class: "button" %>
+  </div>
+<% end %>
+
+<%= turbo_stream_from "admin" %>
+
+<div class="layout-2col">
+  <section class="stack">
+    <h2>端末（<%= @devices.size %>）</h2>
+    <% if @devices.empty? %>
+      <p class="muted">まだ端末がありません。Android アプリから参加すると、ここに出ます。</p>
+    <% end %>
+    <div class="device-grid" id="devices">
+      <%= render partial: "admin/device", collection: @devices, as: :device %>
+    </div>
+  </section>
+
+  <aside class="stack">
+    <div id="ranking"><%= render "admin/ranking" %></div>
+
+    <div class="card stack">
+      <h2>ログ</h2>
+      <div class="events" id="events">
+        <%= render partial: "admin/event", collection: @events, as: :event %>
+      </div>
+    </div>
+  </aside>
+</div>

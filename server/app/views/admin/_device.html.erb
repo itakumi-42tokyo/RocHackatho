@@ -1,0 +1,31 @@
+<%= tag.div id: dom_id(device), class: "card device-card stack #{'device-card--locked' if device.locked?}" do %>
+  <div class="row">
+    <h3><%= device.name %></h3>
+    <span class="badge badge--<%= device.status %>"><%= device.status %></span>
+  </div>
+
+  <div class="row">
+    <span><%= device.locked? ? "🔒 ロック中" : "🔓 解除" %></span>
+    <span class="muted">脱獄 <%= device.escape_count %> 回</span>
+  </div>
+
+  <%= form_with url: admin_device_path(device), method: :patch, class: "stack" do |f| %>
+    <label class="cluster">
+      強さ
+      <%= f.select :lock_mode, [["重ね表示だけ(弱)", "overlay"], ["画面固定(中)", "pinning"], ["固定＋重ね(強)", "full"]], { selected: device.lock_mode } %>
+    </label>
+
+    <label class="opacity-row">
+      濃さ
+      <%= f.range_field :opacity, in: 0..100, step: 5, value: device.opacity %>
+      <span><%= device.opacity %>%</span>
+    </label>
+
+    <%= f.text_field :lock_message, value: device.lock_message, placeholder: "ロック画面の文言（任意）" %>
+
+    <div class="cluster">
+      <%= f.submit "ロック", name: "commit_action", value: "lock", class: "button button--primary" %>
+      <%= f.submit "解除", name: "commit_action", value: "unlock", class: "button" %>
+    </div>
+  <% end %>
+<% end %>
