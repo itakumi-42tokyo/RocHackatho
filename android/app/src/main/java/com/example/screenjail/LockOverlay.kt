@@ -59,6 +59,8 @@ object LockOverlay {
         val wv = WebView(app).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+            // 文言などの変更をすぐ反映するため、キャッシュを使わない
+            settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
             webViewClient = WebViewClient()
             setBackgroundColor(Color.BLACK)
         }
@@ -113,7 +115,7 @@ object LockOverlay {
 
     private fun load(url: String) {
         val wv = webView ?: return
-        if (wv.url == url) return
+        // 文言などが変わることがあるので、同じ URL でも読み直す
         // 無料プランの ngrok が挟む警告ページを飛ばす
         wv.loadUrl(url, mapOf("ngrok-skip-browser-warning" to "1"))
     }

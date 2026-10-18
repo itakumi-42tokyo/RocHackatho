@@ -9,7 +9,7 @@
     <span class="muted">脱獄 <%= device.escape_count %> 回</span>
   </div>
 
-  <%= form_with url: admin_device_path(device), method: :patch, class: "stack" do |f| %>
+  <%= form_with scope: :device, url: admin_device_path(device), method: :patch, class: "stack" do |f| %>
     <label class="cluster">
       強さ
       <%= f.select :lock_mode, [["重ね表示だけ(弱)", "overlay"], ["画面固定(中)", "pinning"], ["固定＋重ね(強)", "full"]], { selected: device.lock_mode } %>

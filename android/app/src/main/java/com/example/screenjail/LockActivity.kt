@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.WindowManager
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 
@@ -40,7 +41,16 @@ class LockActivity : Activity() {
                 activity.runOnUiThread { activity.releaseLock() }
             }
         }
+
+        // すでに表示中なら、新しい文言などを反映するためにページを読み直す
+        fun reloadIfRunning(url: String) {
+            instance?.let { activity ->
+                activity.runOnUiThread { activity.loadLock(url) }
+            }
+        }
     }
+
+    private var webView: WebView? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private val autoRelease = Runnable { releaseLock() }
@@ -63,15 +73,17 @@ class LockActivity : Activity() {
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
         )
 
-        val webView = WebView(this).apply {
+        val wv = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+            // 文言などの変更をすぐ反映するため、キャッシュを使わない
+            settings.cacheMode = WebSettings.LOAD_NO_CACHE
             webViewClient = WebViewClient()
-            // 無料プランの ngrok が挟む警告ページを飛ばす
-            loadUrl(lockUrl, mapOf("ngrok-skip-browser-warning" to "1"))
         }
-        setContentView(webView)
+        webView = wv
+        setContentView(wv)
         instance = this
+        loadLock(lockUrl)
 
         // 安全タイマー。指定秒後に必ず解除する（既定 30 秒、0 で無効）
         val seconds = intent.getIntExtra(EXTRA_AUTO_RELEASE, 30)
@@ -82,6 +94,11 @@ class LockActivity : Activity() {
         if (instance === this) instance = null
         handler.removeCallbacks(autoRelease)
         super.onDestroy()
+    }
+
+    // 無料プランの ngrok が挟む警告ページを飛ばしつつ、ロック画面を読み込む
+    private fun loadLock(url: String) {
+        webView?.loadUrl(url, mapOf("ngrok-skip-browser-warning" to "1"))
     }
 
     override fun onResume() {

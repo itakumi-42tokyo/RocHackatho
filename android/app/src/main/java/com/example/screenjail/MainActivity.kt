@@ -50,6 +50,14 @@ class MainActivity : Activity() {
             setOnClickListener { join() }
         }
 
+        val resetButton = Button(this).apply {
+            text = "参加をやり直す（新しい端末として登録）"
+            setOnClickListener {
+                prefs.edit().remove(Prefs.TOKEN).apply()
+                join()
+            }
+        }
+
         val grantButton = Button(this).apply {
             text = "重ね表示を許可する（最初に 1 回）"
             setOnClickListener { openOverlaySettings() }
@@ -80,6 +88,7 @@ class MainActivity : Activity() {
             addView(serverUrlField)
             addView(nameField)
             addView(joinButton)
+            addView(resetButton)
             addView(sectionTest)
             addView(showButton)
             addView(hideButton)
@@ -93,8 +102,16 @@ class MainActivity : Activity() {
         val baseUrl = serverUrlField.text.toString().trim().ifBlank { BuildConfig.DEFAULT_SERVER_URL }
         val name = nameField.text.toString().trim().ifBlank { "名無し端末" }
         prefs.edit().putString(Prefs.SERVER_URL, baseUrl).putString(Prefs.DEVICE_NAME, name).apply()
-        status.text = "登録中…"
 
+        // すでに参加済みなら登録し直さない（重複登録を防ぐ）。接続だけ始める
+        if (!prefs.getString(Prefs.TOKEN, null).isNullOrBlank()) {
+            LockService.start(this)
+            updateStatus()
+            Toast.makeText(this, "接続しました（登録済み）", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        status.text = "登録中…"
         DeviceRegistrar.register(baseUrl, name) { token, error ->
             if (token != null) {
                 prefs.edit().putString(Prefs.TOKEN, token).apply()

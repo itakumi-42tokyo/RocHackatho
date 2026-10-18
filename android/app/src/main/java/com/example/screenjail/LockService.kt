@@ -33,6 +33,7 @@ class LockService : Service(), CableClient.Listener {
 
     private val main = Handler(Looper.getMainLooper())
     private var cable: CableClient? = null
+    private var currentToken: String? = null
     private var currentlyLocked = false
 
     private val heartbeat = object : Runnable {
@@ -58,7 +59,11 @@ class LockService : Service(), CableClient.Listener {
             return START_NOT_STICKY
         }
 
-        if (cable == null) {
+        // 未接続、またはトークンが変わった（参加し直した）ら、つなぎ直す
+        if (cable == null || token != currentToken) {
+            cable?.disconnect()
+            main.removeCallbacks(heartbeat)
+            currentToken = token
             cable = CableClient(baseUrl, token, this).also { it.connect() }
             main.postDelayed(heartbeat, HEARTBEAT_MS)
         }
@@ -106,7 +111,11 @@ class LockService : Service(), CableClient.Listener {
     }
 
     private fun launchLockActivity(mode: String, lockUrl: String) {
-        if (LockActivity.isRunning) return
+        if (LockActivity.isRunning) {
+            // すでに表示中なら、新しい文言などを反映するため読み直すだけ
+            LockActivity.reloadIfRunning(lockUrl)
+            return
+        }
         val intent = Intent(this, LockActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             putExtra(LockActivity.EXTRA_MODE, mode)
