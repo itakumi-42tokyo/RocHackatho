@@ -3,6 +3,8 @@
   <head>
     <title>LOCKED</title>
     <%= render "layouts/head" %>
+    <%# 保険: 外部 CSS が読めなくても、暗い背景＋明るい文字で最低限は読めるようにする %>
+    <style>html, body { background: #0d0f12; color: #f2f3f5; margin: 0; }</style>
     <%= stylesheet_link_tag "tokens", "base", "components", "lock", "data-turbo-track": "reload" %>
   </head>
   <body class="lock">

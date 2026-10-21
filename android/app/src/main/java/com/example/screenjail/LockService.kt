@@ -23,6 +23,7 @@ class LockService : Service(), CableClient.Listener {
         private const val NOTE_ID = 1
         private const val HEARTBEAT_MS = 3000L
         private const val SAFETY_AUTO_RELEASE = 180 // 通信断でも最後は戻れるようにする保険（秒）
+        private const val TAG = "LockService"
 
         fun start(context: Context) {
             val intent = Intent(context, LockService::class.java)
@@ -80,6 +81,7 @@ class LockService : Service(), CableClient.Listener {
         val opacity = state.optInt("opacity", 100)
         val lockUrl = baseUrl.trimEnd('/') + state.optString("lock_path", "/lock")
 
+        android.util.Log.d(TAG, "onState locked=$locked mode=$mode opacity=$opacity")
         currentlyLocked = locked
         if (locked) applyLock(mode, opacity, lockUrl) else releaseLock()
     }
@@ -90,24 +92,27 @@ class LockService : Service(), CableClient.Listener {
     // ---- ロックの適用 ----
 
     private fun applyLock(mode: String, opacity: Int, lockUrl: String) {
+        android.util.Log.d(TAG, "applyLock mode=$mode opacity=$opacity")
         when (mode) {
             "overlay" -> {
                 LockActivity.releaseIfRunning()
-                LockOverlay.show(this, lockUrl, opacity)
+                LockOverlay.show(this, lockUrl, opacity, reason = "state:locked/overlay")
             }
             "pinning" -> {
-                LockOverlay.hide(this)
+                LockOverlay.hide(this, reason = "state:locked/pinning")
                 launchLockActivity(LockActivity.MODE_PINNING, lockUrl)
             }
-            else -> { // full
+            else -> { // full: 画面固定（ホーム・タスク管理を無効）＋ 重ね表示（固定を解いても覆いが残る）
                 launchLockActivity(LockActivity.MODE_FULL, lockUrl)
+                LockOverlay.show(this, lockUrl, opacity, reason = "state:locked/full")
             }
         }
     }
 
     private fun releaseLock() {
+        android.util.Log.d(TAG, "releaseLock (state:unlocked)")
         LockActivity.releaseIfRunning()
-        LockOverlay.hide(this)
+        LockOverlay.hide(this, reason = "state:unlocked")
     }
 
     private fun launchLockActivity(mode: String, lockUrl: String) {

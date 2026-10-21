@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -20,6 +21,15 @@ import android.widget.FrameLayout
  * 見た目は Rails が描画したページを WebView で表示するだけ。ネイティブ側は「覆う」「戻るを無効にする」「不透明度」だけを受け持つ。
  */
 object LockOverlay {
+    private const val TAG = "LockOverlay"
+
+    // 非ブラウザの UA。ngrok 無料プランの警告ページを CSS/JS のサブリクエストでも回避する
+    const val USER_AGENT = "ScreenJail-Lock"
+
+    // 覆いの暗い背景（jail テーマの #0d0f12）。WebView ではなくコンテナに敷く。
+    // ページ読み込み前のつなぎとして、また純黒 WebView の黒つぶれを避けるために使う。
+    private const val OVERLAY_BG = 0xFF0D0F12.toInt()
+
     private var root: FrameLayout? = null
     private var webView: WebView? = null
     private var params: WindowManager.LayoutParams? = null
@@ -33,19 +43,25 @@ object LockOverlay {
 
     fun canDraw(context: Context): Boolean = Settings.canDrawOverlays(context)
 
+    /** メインスレッド以外から呼ばれても落ちないように、UI 操作はメインスレッドへ回す */
+    private fun onMain(block: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) block() else handler.post(block)
+    }
+
     /**
      * ロック画面を表示する。すでに表示中なら URL と不透明度だけ更新する。
      * autoHideSeconds > 0 なら、その秒数で自動的に消える（テスト時の安全タイマー。0 で無効）。
      */
     @SuppressLint("SetJavaScriptEnabled")
-    fun show(context: Context, url: String, opacityPercent: Int, autoHideSeconds: Int = 0) {
-        if (!canDraw(context)) return
+    fun show(context: Context, url: String, opacityPercent: Int, autoHideSeconds: Int = 0, reason: String = ""): Unit = onMain {
+        Log.d(TAG, "show() reason=$reason url=$url opacity=$opacityPercent alreadyShown=$isShown")
+        if (!canDraw(context)) return@onMain
         appContext = context.applicationContext
         scheduleAutoHide(autoHideSeconds)
         if (root != null) {
             load(url)
             setOpacity(context, opacityPercent)
-            return
+            return@onMain
         }
 
         val app = context.applicationContext
@@ -56,13 +72,17 @@ object LockOverlay {
                 return super.dispatchKeyEvent(event)
             }
         }
+        // 暗い背景はコンテナに敷き、WebView は透明にする（純黒の WebView だと黒つぶれするため）
+        container.setBackgroundColor(OVERLAY_BG)
         val wv = WebView(app).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             // 文言などの変更をすぐ反映するため、キャッシュを使わない
             settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+            // 非ブラウザの UA にすると、ngrok の警告ページを CSS/JS のサブリクエストでも回避できる
+            settings.userAgentString = USER_AGENT
             webViewClient = WebViewClient()
-            setBackgroundColor(Color.BLACK)
+            setBackgroundColor(Color.TRANSPARENT)
         }
         container.addView(wv, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 
@@ -71,8 +91,10 @@ object LockOverlay {
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             // FLAG_NOT_FOCUSABLE と FLAG_NOT_TOUCHABLE は付けない: キーとタッチをすべてこのウィンドウで受け取る
+            // FLAG_HARDWARE_ACCELERATED は必須。付けないと WebView が真っ黒になる（WindowManager 直付けのウィンドウの既定は非 HW 加速）
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT
         ).apply {
             alpha = opacityPercent.coerceIn(0, 100) / 100f
@@ -90,10 +112,16 @@ object LockOverlay {
         load(url)
     }
 
-    fun hide(context: Context) {
+    fun hide(context: Context, reason: String = ""): Unit = onMain {
+        Log.d(TAG, "hide() reason=$reason wasShown=$isShown")
         handler.removeCallbacks(autoHide)
-        val view = root ?: return
-        windowManager(context.applicationContext).removeView(view)
+        val view = root ?: return@onMain
+        webView?.stopLoading()
+        try {
+            windowManager(context.applicationContext).removeView(view)
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "hide() removeView 失敗（すでに外れている可能性）: ${e.message}")
+        }
         webView?.destroy()
         root = null
         webView = null
@@ -106,9 +134,9 @@ object LockOverlay {
         if (seconds > 0) handler.postDelayed(autoHide, seconds * 1000L)
     }
 
-    fun setOpacity(context: Context, opacityPercent: Int) {
-        val view = root ?: return
-        val lp = params ?: return
+    fun setOpacity(context: Context, opacityPercent: Int): Unit = onMain {
+        val view = root ?: return@onMain
+        val lp = params ?: return@onMain
         lp.alpha = opacityPercent.coerceIn(0, 100) / 100f
         windowManager(context.applicationContext).updateViewLayout(view, lp)
     }

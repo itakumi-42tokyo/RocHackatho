@@ -78,6 +78,8 @@ class LockActivity : Activity() {
             settings.domStorageEnabled = true
             // 文言などの変更をすぐ反映するため、キャッシュを使わない
             settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            // 非ブラウザの UA にすると、ngrok の警告ページを CSS/JS のサブリクエストでも回避できる
+            settings.userAgentString = LockOverlay.USER_AGENT
             webViewClient = WebViewClient()
         }
         webView = wv
@@ -105,11 +107,7 @@ class LockActivity : Activity() {
         super.onResume()
         hideSystemBars()
         startPinning()
-        // full モードは重ね表示も出す。固定を解除しても覆いが残るので他のアプリへ抜けられない
-        if (mode == MODE_FULL) {
-            val seconds = intent.getIntExtra(EXTRA_AUTO_RELEASE, 30)
-            LockOverlay.show(applicationContext, lockUrl, 100, autoHideSeconds = seconds)
-        }
+        // full モードの重ね表示は LockService が管理する（ここで出すと解除時に競合して黒画面が残るため）
     }
 
     /** 画面固定を始める。ホームとタスク管理ボタンが無効になる */
@@ -160,7 +158,7 @@ class LockActivity : Activity() {
             stopLockTask()
         } catch (_: Exception) {
         }
-        LockOverlay.hide(applicationContext)
+        LockOverlay.hide(applicationContext, reason = "LockActivity.releaseLock")
         finish()
     }
 }

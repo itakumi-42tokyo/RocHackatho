@@ -69,11 +69,11 @@ class MainActivity : Activity() {
         }
         val showButton = Button(this).apply {
             text = "ロック画面を表示"
-            setOnClickListener { LockOverlay.show(this@MainActivity, previewUrl, 100) }
+            setOnClickListener { LockOverlay.show(this@MainActivity, previewUrl, 100, reason = "MainActivity.testShowButton") }
         }
         val hideButton = Button(this).apply {
             text = "ロック画面を閉じる"
-            setOnClickListener { LockOverlay.hide(this@MainActivity) }
+            setOnClickListener { LockOverlay.hide(this@MainActivity, reason = "MainActivity.testHideButton") }
         }
         val fullButton = Button(this).apply {
             text = "最強ロックを試す（30 秒で自動解除）"
