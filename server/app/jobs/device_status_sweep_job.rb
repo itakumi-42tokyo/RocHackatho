@@ -1,4 +1,4 @@
-# 5 秒ごとに実行し、ハートビートが途絶えた端末の状態を更新する。
+# 定期実行（recurring.yml で 15 秒ごと）し、ハートビートが途絶えた端末の状態を更新する。
 # 状態が変わったときだけ保存する（無駄な broadcast を出さない）。
 class DeviceStatusSweepJob < ApplicationJob
   queue_as :default

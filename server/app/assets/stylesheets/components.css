@@ -34,5 +34,6 @@
 .badge--online { background: var(--color-online); color: #fff; }
 .badge--inactive { background: var(--color-inactive); color: #fff; }
 .badge--offline { background: var(--color-offline); color: #fff; }
+.badge--escaped { background: var(--color-accent); color: var(--color-accent-text); font-weight: 700; }
 
 .muted { color: var(--color-muted); }

@@ -47,7 +47,7 @@ class Device < ApplicationRecord
   # （last_seen_at・connection_id のような見た目に出ない更新では配信しない）
   ADMIN_VISIBLE_COLUMNS = %w[
     name status locked lock_mode opacity lock_message lock_title lock_buttons
-    unlock_until escape_count best_escape_seconds client_id
+    unlock_until escaped escape_count best_escape_seconds client_id
   ].freeze
 
   # 管理画面は Turbo 8 のページリフレッシュ（morph）で更新する（個別の replace/append はしない）。
@@ -81,9 +81,10 @@ class Device < ApplicationRecord
   end
 
   # 承認時に呼ぶ。locked はそのままに、一時解除の期限だけを入れる。
+  # 承認は脱獄状態も解消する（escaped をクリア）＝「一時解除中」と「🚨脱獄中」が同時に出ない。
   # unlock_until が変わると device_facing_change? が効いて端末へ状態が送られる（＝解除が届く）。
   def grant_break!(minutes)
-    update!(unlock_until: Time.current + minutes.to_i.minutes)
+    update!(unlock_until: Time.current + minutes.to_i.minutes, escaped: false)
   end
 
   # 一時解除を延長する。今の残り時間（未来なら）に足す。足した後の時刻を返す

@@ -21,6 +21,13 @@ class Admin::DevicesControllerTest < ActionDispatch::IntegrationTest
     assert_match "休憩", response.body                 # 承認待ちリクエストのラベル
   end
 
+  test "脱獄中の端末はカードに🚨バッジが出る" do
+    device = Device.create!(name: "A", locked: true, escaped: true)
+    get admin_root_path, headers: auth
+    assert_response :success
+    assert_select ".badge--escaped"
+  end
+
   test "延長で unlock_until が伸び、再ロックジョブが予約される" do
     device = Device.create!(name: "A", locked: true, unlock_until: 2.minutes.from_now)
     before = device.unlock_until

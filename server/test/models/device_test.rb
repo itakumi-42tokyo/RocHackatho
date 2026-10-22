@@ -32,6 +32,12 @@ class DeviceTest < ActiveSupport::TestCase
     end
   end
 
+  test "grant_break! は escaped をクリアする（一時解除中に🚨が残らない）" do
+    @device.update!(locked: true, escaped: true)
+    @device.grant_break!(10)
+    refute @device.escaped?
+  end
+
   test "unlock_remaining_seconds は未来のときだけ正、それ以外は 0" do
     @device.update!(unlock_until: 30.seconds.from_now)
     assert @device.unlock_remaining_seconds.positive?
