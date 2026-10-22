@@ -1,4 +1,6 @@
 <%= render "lock/screen",
       device_name: "サンプル",
+      title: "LOCKED",
       message: "Tired: writing. Wired: reading.",
+      buttons: [{ "label" => "休憩したい", "kind" => "break" }, { "label" => "トイレ", "kind" => "toilet" }],
       theme: @theme %>

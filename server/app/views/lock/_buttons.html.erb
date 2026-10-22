@@ -1,0 +1,8 @@
+<%# ロック画面のボタン（最大2つ）。送信の配線はフェーズ2で行う %>
+<% if buttons.present? %>
+  <div class="lock-buttons">
+    <% buttons.each do |b| %>
+      <button type="button" class="lock-button" data-kind="<%= b["kind"] %>"><%= b["label"] %></button>
+    <% end %>
+  </div>
+<% end %>

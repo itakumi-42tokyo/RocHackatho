@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_18_041220) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_22_060000) do
   create_table "device_events", force: :cascade do |t|
     t.integer "device_id", null: false
     t.string "kind"
@@ -35,6 +35,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_18_041220) do
     t.integer "best_escape_seconds"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "lock_title", default: "LOCKED", null: false
+    t.json "lock_buttons", default: [{"label" => "休憩したい", "kind" => "break"}, {"label" => "トイレ", "kind" => "toilet"}], null: false
     t.index ["token"], name: "index_devices_on_token", unique: true
   end
 

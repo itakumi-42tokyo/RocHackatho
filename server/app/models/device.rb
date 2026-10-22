@@ -4,6 +4,8 @@ class Device < ApplicationRecord
 
   LOCK_MODES = %w[overlay pinning full].freeze
   STATUSES = %w[online inactive offline].freeze
+  BUTTON_KINDS = %w[break toilet help custom].freeze
+  MAX_BUTTONS = 2
 
   # 死活判定のしきい値（秒）
   INACTIVE_AFTER = 15
@@ -31,6 +33,25 @@ class Device < ApplicationRecord
       message: lock_message.to_s,
       lock_path: "/lock?token=#{token}"
     }
+  end
+
+  # ロック画面の内容をデータで定義する（HTML 描画と JSON API で共通に使う。将来の iOS ネイティブ描画用）
+  def lock_screen_data
+    {
+      title: lock_title.presence || "LOCKED",
+      message: lock_message.to_s,
+      buttons: normalized_buttons
+    }
+  end
+
+  # 最大 MAX_BUTTONS 件、既知の kind だけに整える
+  def normalized_buttons
+    Array(lock_buttons).first(MAX_BUTTONS).filter_map do |b|
+      label = b["label"].to_s
+      kind = b["kind"].to_s
+      next if label.blank? || BUTTON_KINDS.exclude?(kind)
+      { "label" => label, "kind" => kind }
+    end
   end
 
   def lock!(mode: nil, opacity: nil, message: nil)

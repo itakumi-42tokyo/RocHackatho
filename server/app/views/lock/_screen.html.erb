@@ -1,8 +1,9 @@
-<%# ロック画面の全体構成。locals: device_name, message, theme %>
+<%# ロック画面の全体構成。locals: title, message, buttons, device_name, theme %>
 <% content_for :theme, theme %>
 <div class="lock-top">SCREEN JAIL</div>
 <div class="lock-center">
-  <%= render "lock/title" %>
+  <%= render "lock/title", title: title %>
   <%= render "lock/message", message: message %>
+  <%= render "lock/buttons", buttons: buttons %>
 </div>
 <%= render "lock/footer", device_name: device_name %>
