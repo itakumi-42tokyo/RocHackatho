@@ -299,6 +299,23 @@ WebSocket のハンドシェイクを curl で送って確認した。
 - トランザクションテストでは `after_commit` がテスト中に発火しないため、`capture_broadcasts` が 0 件になる。broadcast の中身は「`after_commit` を介さず partial を直接描画」して確認した
 - Turbo の broadcast ストリーム名は `turbo:streams:admin` のように接頭辞が付く（生の `"admin"` ではない）
 
+### フェーズ 13: 管理画面を Turbo 8 のページリフレッシュ（morph）に切り替え
+ログ解析で、管理画面のライブ更新が効かない原因が 2 つ判明した。
+- **新規端末のカードが出ない**: 新規登録時の配信が `replace target="device_20"`。登録前に開いていた管理画面には `device_20` が無く、Turbo は何もしない（append が必要だった）
+- **休憩リクエストが出ない**: 作成時の admin への配信が、個別 target への replace で、対象や並びの前提に依存して届かない場面があった
+
+#### 💡 決定: 個別の replace/append をやめ、ページリフレッシュ（morph）配信に統一
+- 管理レイアウトに `turbo_refreshes_with method: :morph, scroll: :preserve`
+- `Device` / `BreakRequest` / `DeviceEvent` は、変更時に `broadcast_refresh_to "admin"` を配信（`after_commit`）。購読側は現在の URL を取り直して **morph で差分だけ当てる**
+- 一覧・バナー・ランキング・ログがすべて「今の DB の状態」で描き直るので、**新規カードも承認待ちも残り時間も、取りこぼしなく**反映される
+- なぜ `broadcasts_refreshes_to`（`_later`＝デバウンス＋ジョブ）ではなく即時 `broadcast_refresh_to` か: 即時配信は同期的でテストが安定する。morph の重複当ては Turbo クライアント側で吸収される。件数が少ないハッカソン規模では十分
+- **端末のロック画面は従来どおり個別差し替え**（`#lock_request_zone` のみ）。全面リフレッシュのちらつきを避ける
+- 入力の保護: 却下理由・一括設定のタイトル/選択・端末の文言の `<input>` に `data-turbo-permanent` と安定した id を付け、morph で入力中のテキスト・フォーカスが消えないようにした
+- 承認待ちバナーは morph で `data-pending-count-value` が変わり、Stimulus の `countValueChanged` でタブのタイトルと新着音（件数が増えたときだけ）を更新する
+
+#### テスト
+- 端末の新規登録・休憩リクエストの作成/承認/却下/取り消しで `"admin"` に refresh が配信されることを統合テストで確認（`after_commit` を発火させるためこのクラスだけ非トランザクション）
+
 ---
 
 ## スクリーンショット・写真

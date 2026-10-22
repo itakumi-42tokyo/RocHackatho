@@ -9,11 +9,13 @@
 <%# 全員操作: ロック画面のタイトルとボタン構成を一括設定 %>
 <details class="card bulk-lock-screen">
   <summary>ロック画面を全員に一括設定</summary>
+  <%# morph でも入力中の値・選択を保つ %>
   <%= form_with url: update_lock_screen_admin_devices_path, method: :post, class: "cluster" do %>
-    <%= text_field_tag :lock_title, "LOCKED", placeholder: "タイトル" %>
+    <%= text_field_tag :lock_title, "LOCKED", placeholder: "タイトル",
+          id: "bulk_lock_title", data: { turbo_permanent: true } %>
     <%= select_tag :buttons_preset, options_for_select(
           [["休憩＋トイレ", "break_toilet"], ["休憩＋その他", "break_custom"], ["トイレのみ", "toilet_only"], ["ボタンなし", "none"]],
-          "break_toilet") %>
+          "break_toilet"), id: "bulk_buttons_preset", data: { turbo_permanent: true } %>
     <%= submit_tag "全員に適用", class: "button" %>
   <% end %>
 </details>

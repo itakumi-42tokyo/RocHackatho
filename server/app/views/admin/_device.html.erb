@@ -31,12 +31,15 @@
         <%= select_tag :minutes,
               options_for_select(BreakRequest::PRESET_MINUTES.map { |m| ["#{m}分", m] }, req.default_minutes),
               id: "minutes_#{req.id}" %>
-        <%= text_field_tag :reply, nil, placeholder: "ひとこと（任意）", class: "request-reply" %>
+        <%# morph でも入力中のテキストを消さない %>
+        <%= text_field_tag :reply, nil, placeholder: "ひとこと（任意）", class: "request-reply",
+              id: "approve_reply_#{req.id}", data: { turbo_permanent: true } %>
         <%= submit_tag "承認", class: "button button--primary" %>
       <% end %>
 
       <%= form_with url: deny_admin_break_request_path(req), method: :patch, class: "cluster request-deny" do %>
-        <%= text_field_tag :reply, nil, placeholder: "却下の理由（任意）", class: "request-reply" %>
+        <%= text_field_tag :reply, nil, placeholder: "却下の理由（任意）", class: "request-reply",
+              id: "deny_reply_#{req.id}", data: { turbo_permanent: true } %>
         <%= submit_tag "却下", class: "button" %>
       <% end %>
     </div>
@@ -54,7 +57,8 @@
       <span><%= device.opacity %>%</span>
     </label>
 
-    <%= f.text_field :lock_message, value: device.lock_message, placeholder: "ロック画面の文言（任意）" %>
+    <%= f.text_field :lock_message, value: device.lock_message, placeholder: "ロック画面の文言（任意）",
+          id: "lock_message_#{device.id}", data: { turbo_permanent: true } %>
 
     <div class="cluster">
       <%= f.submit "ロック", name: "commit_action", value: "lock", class: "button button--primary" %>

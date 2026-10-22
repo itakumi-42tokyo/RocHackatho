@@ -1,18 +1,22 @@
 import { Controller } from "@hotwired/stimulus"
 
-// 承認待ち件数をタブのタイトルに出し、増えたら短く音を鳴らす。
-// バナーは Turbo Stream で丸ごと差し替わるので、件数は要素ごとに connect で読み直す。
+// 承認待ち件数をタブのタイトルに出し、件数が増えたら短く音を鳴らす。
+// 管理画面は morph リフレッシュで更新されるため、要素は保持されたまま
+// data-pending-count-value だけが変わる。connect と countValueChanged の両方で反映する。
 const BASE_TITLE = "ScreenJail 管理"
 
 export default class extends Controller {
   static values = { count: Number }
 
-  connect() {
+  connect() { this.apply() }
+  countValueChanged() { this.apply() }
+
+  apply() {
     const n = this.countValue
     document.title = n > 0 ? `(${n}) ${BASE_TITLE}` : BASE_TITLE
 
     const prev = window.__screenjailPending
-    if (typeof prev === "number" && n > prev) this.beep()
+    if (typeof prev === "number" && n > prev) this.beep() // 増えたときだけ鳴らす
     window.__screenjailPending = n
   }
 

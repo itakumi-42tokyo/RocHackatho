@@ -2,6 +2,8 @@
 <html lang="ja" data-theme="<%= content_for(:theme).presence || "default" %>">
   <head>
     <title><%= content_for(:title) || "ScreenJail 管理" %></title>
+    <%# ブロードキャストされたページリフレッシュは morph で当てる（入力やスクロールを保つ） %>
+    <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
     <%= render "layouts/head" %>
     <%= stylesheet_link_tag "tokens", "base", "components", "admin", "data-turbo-track": "reload" %>
   </head>

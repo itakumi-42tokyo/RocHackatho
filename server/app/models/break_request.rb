@@ -20,8 +20,11 @@ class BreakRequest < ApplicationRecord
 
   before_validation :set_defaults, on: :create
 
-  after_create_commit :refresh_screens
-  after_update_commit :refresh_screens
+  # 端末のロック画面は個別差し替え（ちらつきを避ける）
+  after_create_commit :refresh_lock_screen
+  after_update_commit :refresh_lock_screen
+  # 管理画面は Turbo 8 のページリフレッシュ（morph）で更新する
+  after_commit        -> { broadcast_refresh_to "admin" }
 
   # 「まだ処理待ち」= pending かつ期限内。端末が同時に持てるのは 1 件だけ
   scope :open, -> { where(status: "pending").where("expires_at > ?", Time.current) }
@@ -98,19 +101,11 @@ class BreakRequest < ApplicationRecord
     end
   end
 
-  # ロック画面（端末）と管理画面の両方を Turbo Streams で更新する（再読み込みしない）
-  def refresh_screens
-    # 端末のロック画面：リクエスト欄だけ差し替え
+  # 端末のロック画面のリクエスト欄だけを差し替える（再読み込みしない）
+  def refresh_lock_screen
     broadcast_replace_to [device, :lock],
                          target: "lock_request_zone",
                          partial: "lock/request_zone",
                          locals: { device: device }
-    # 管理画面：この端末のカードを差し替え（承認待ちの表示が出る）
-    broadcast_replace_to "admin",
-                         target: ActionView::RecordIdentifier.dom_id(device),
-                         partial: "admin/device",
-                         locals: { device: device }
-    # 管理画面：承認待ち件数バナーを更新（タブのタイトル・新着音もこれで動く）
-    broadcast_replace_to "admin", target: "pending_banner", partial: "admin/pending_banner"
   end
 end

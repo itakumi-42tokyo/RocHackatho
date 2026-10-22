@@ -11,6 +11,9 @@ class Admin::DevicesControllerTest < ActionDispatch::IntegrationTest
 
     get admin_root_path, headers: auth
     assert_response :success
+    assert_select "meta[name=?][content=?]", "turbo-refresh-method", "morph" # morph 配信を受ける
+    assert_select "turbo-cable-stream-source"         # "admin" を購読している
+    assert_select "#pending_banner"                   # 承認待ちバナー
     assert_select "form.request-approve"              # 承認フォーム
     assert_select ".bulk-lock-screen"                 # 全員一括設定
     assert_match "休憩", response.body                 # 承認待ちリクエストのラベル

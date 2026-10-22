@@ -43,9 +43,10 @@ class Device < ApplicationRecord
   scope :jailbreakers, -> { where("escape_count > 0").order(escape_count: :desc) }
   scope :fastest_escapes, -> { where.not(best_escape_seconds: nil).order(best_escape_seconds: :asc) }
 
-  after_create_commit  { refresh_admin }
+  # 管理画面は Turbo 8 のページリフレッシュ（morph）で更新する（個別の replace/append はしない）
+  after_commit         -> { broadcast_refresh_to "admin" }
+  # 端末（Android）へは従来どおり個別に状態を送る（ちらつきを避ける）
   after_update_commit  :push_state_to_device, if: :device_facing_change?
-  after_update_commit  { refresh_admin }
 
   # Android に送る現在の状態。命令ではなく「今の状態」をまるごと送る。
   # locked は「実効ロック」= ロック中かつ一時解除の期限が切れている、で計算する。
@@ -170,12 +171,5 @@ class Device < ApplicationRecord
   # 現在の状態を端末（Android）に送る
   def push_state_to_device
     broadcast_state!
-  end
-
-  # 管理画面のカードとランキングを更新する（Turbo Streams）
-  def refresh_admin
-    broadcast_replace_to "admin", target: ActionView::RecordIdentifier.dom_id(self),
-                                  partial: "admin/device", locals: { device: self }
-    broadcast_replace_to "admin", target: "ranking", partial: "admin/ranking"
   end
 end
