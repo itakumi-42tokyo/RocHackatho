@@ -5,6 +5,8 @@ module ApplicationCable
 
     def connect
       self.current_device = find_device
+      # 「相手はブラウザだけじゃない」。どの経路で端末を特定したかを残す（実機確認・発表用）
+      logger.info "Cable 接続: device=#{current_device&.id || 'なし'} 経路=#{@identified_via || 'なし(管理画面など)'}"
     end
 
     private
@@ -12,7 +14,13 @@ module ApplicationCable
     # ネイティブ（OkHttp）は token、ブラウザ／WebView は署名付き Cookie で端末を特定する。
     # どちらでもない接続（管理画面など）は current_device を持たない（nil のまま）。
     def find_device
-      device_from_token || device_from_cookie
+      if (device = device_from_token)
+        @identified_via = "token"
+        device
+      elsif (device = device_from_cookie)
+        @identified_via = "cookie"
+        device
+      end
     end
 
     # token は Android が ?token=… かヘッダー Authorization: Bearer … で渡す
