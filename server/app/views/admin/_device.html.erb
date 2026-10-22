@@ -1,13 +1,43 @@
-<%= tag.div id: dom_id(device), class: "card device-card stack #{'device-card--locked' if device.locked?}" do %>
+<%= tag.div id: dom_id(device), class: "card device-card stack #{'device-card--locked' if device.effective_locked?}" do %>
   <div class="row">
     <h3><%= device.name %></h3>
     <span class="badge badge--<%= device.status %>"><%= device.status %></span>
   </div>
 
   <div class="row">
-    <span><%= device.locked? ? "🔒 ロック中" : "🔓 解除" %></span>
+    <% if device.effective_locked? %>
+      <span>🔒 ロック中</span>
+    <% elsif device.locked? && device.unlock_remaining_seconds.positive? %>
+      <span>⏳ 一時解除中（残り <%= (device.unlock_remaining_seconds / 60.0).ceil %> 分）</span>
+    <% else %>
+      <span>🔓 解除</span>
+    <% end %>
     <span class="muted">脱獄 <%= device.escape_count %> 回</span>
   </div>
+
+  <%# 承認待ちのリクエストがあれば、承認・却下の操作を出す %>
+  <% if (req = device.open_break_request) %>
+    <div class="card request-box stack">
+      <div class="row">
+        <strong>📨 <%= req.label %></strong>
+        <span class="muted"><%= time_ago_in_words(req.created_at) %>前</span>
+      </div>
+
+      <%= form_with url: approve_admin_break_request_path(req), method: :patch, class: "cluster request-approve" do %>
+        <%= label_tag "minutes_#{req.id}", "解除", class: "muted" %>
+        <%= select_tag :minutes,
+              options_for_select(BreakRequest::PRESET_MINUTES.map { |m| ["#{m}分", m] }, req.default_minutes),
+              id: "minutes_#{req.id}" %>
+        <%= text_field_tag :reply, nil, placeholder: "ひとこと（任意）", class: "request-reply" %>
+        <%= submit_tag "承認", class: "button button--primary" %>
+      <% end %>
+
+      <%= form_with url: deny_admin_break_request_path(req), method: :patch, class: "cluster request-deny" do %>
+        <%= text_field_tag :reply, nil, placeholder: "却下の理由（任意）", class: "request-reply" %>
+        <%= submit_tag "却下", class: "button" %>
+      <% end %>
+    </div>
+  <% end %>
 
   <%= form_with scope: :device, url: admin_device_path(device), method: :patch, class: "stack" do |f| %>
     <label class="cluster">

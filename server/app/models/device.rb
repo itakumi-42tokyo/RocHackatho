@@ -34,16 +34,39 @@ class Device < ApplicationRecord
   after_update_commit  :push_state_to_device, if: :device_facing_change?
   after_update_commit  { refresh_admin }
 
-  # Android に送る現在の状態。命令ではなく「今の状態」をまるごと送る
+  # Android に送る現在の状態。命令ではなく「今の状態」をまるごと送る。
+  # locked は「実効ロック」= ロック中かつ一時解除の期限が切れている、で計算する。
   def state_payload
     {
       type: "state",
-      locked: locked,
+      locked: effective_locked?,
       mode: lock_mode,
       opacity: opacity,
       message: lock_message.to_s,
       lock_path: "/lock?token=#{token}"
     }
+  end
+
+  # 実効ロック。unlock_until が未来のあいだは一時的に解除扱い
+  def effective_locked?
+    locked? && (unlock_until.nil? || unlock_until.past?)
+  end
+
+  # 一時解除の残り秒（管理画面の表示用）。解除していなければ 0
+  def unlock_remaining_seconds
+    return 0 unless unlock_until && unlock_until.future?
+    (unlock_until - Time.current).ceil
+  end
+
+  # 承認時に呼ぶ。locked はそのままに、一時解除の期限だけを入れる。
+  # unlock_until が変わると device_facing_change? が効いて端末へ状態が送られる（＝解除が届く）。
+  def grant_break!(minutes)
+    update!(unlock_until: Time.current + minutes.to_i.minutes)
+  end
+
+  # 今の状態を端末へ送り直す（再ロックの予約ジョブから呼ぶ。列の変更が無くても送る）
+  def broadcast_state!
+    DeviceChannel.broadcast_to(self, state_payload)
   end
 
   # ロック画面の内容をデータで定義する（HTML 描画と JSON API で共通に使う。将来の iOS ネイティブ描画用）
@@ -66,7 +89,8 @@ class Device < ApplicationRecord
   end
 
   def lock!(mode: nil, opacity: nil, message: nil)
-    attrs = { locked: true, locked_at: Time.current }
+    # 手動ロックは一時解除より優先する（残っている unlock_until は消す）
+    attrs = { locked: true, locked_at: Time.current, unlock_until: nil }
     attrs[:lock_mode] = mode if mode.present?
     attrs[:opacity] = opacity if opacity
     attrs[:lock_message] = message if message
@@ -75,7 +99,7 @@ class Device < ApplicationRecord
   end
 
   def unlock!
-    update!(locked: false, locked_at: nil)
+    update!(locked: false, locked_at: nil, unlock_until: nil)
     log_event("unlock")
   end
 
@@ -110,14 +134,14 @@ class Device < ApplicationRecord
 
   private
 
-  # Android の画面に関わる変更があったか
+  # Android の画面に関わる変更があったか（文言・ボタンの一括変更や一時解除も含む）
   def device_facing_change?
-    (saved_changes.keys & %w[locked lock_mode opacity lock_message]).any?
+    (saved_changes.keys & %w[locked lock_mode opacity lock_message lock_title lock_buttons unlock_until]).any?
   end
 
   # 現在の状態を端末（Android）に送る
   def push_state_to_device
-    DeviceChannel.broadcast_to(self, state_payload)
+    broadcast_state!
   end
 
   # 管理画面のカードとランキングを更新する（Turbo Streams）

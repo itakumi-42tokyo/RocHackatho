@@ -9,6 +9,9 @@ class BreakRequest < ApplicationRecord
   PENDING_TTL = 10.minutes # 承認待ちのまま放置されたら期限切れにする
   BODY_MAX = 100           # 自由入力の文字数上限
 
+  PRESET_MINUTES = [5, 10, 15, 30].freeze           # 承認時に選べる解除分数
+  DEFAULT_MINUTES = { "toilet" => 5, "break" => 10, "help" => 10, "custom" => 10 }.freeze
+
   validates :kind, inclusion: { in: KINDS }
   validates :status, inclusion: { in: STATUSES }
   validates :body, length: { maximum: BODY_MAX }
@@ -17,8 +20,8 @@ class BreakRequest < ApplicationRecord
 
   before_validation :set_defaults, on: :create
 
-  after_create_commit :refresh_lock_screen
-  after_update_commit :refresh_lock_screen
+  after_create_commit :refresh_screens
+  after_update_commit :refresh_screens
 
   # 「まだ処理待ち」= pending かつ期限内。端末が同時に持てるのは 1 件だけ
   scope :open, -> { where(status: "pending").where("expires_at > ?", Time.current) }
@@ -39,6 +42,32 @@ class BreakRequest < ApplicationRecord
   def cancel!
     return false unless open?
     update!(status: "cancelled", responded_at: Time.current)
+  end
+
+  # 管理者が承認する。locked は変えず、端末に一時解除（unlock_until）を与え、
+  # その時刻に状態を送り直す再ロックジョブを予約する（フェーズ4の核だけ前倒し）。
+  def approve!(minutes:, reply: nil)
+    return false unless status == "pending"
+
+    minutes = minutes.to_i
+    minutes = default_minutes unless PRESET_MINUTES.include?(minutes)
+    transaction do
+      update!(status: "approved", unlock_minutes: minutes, reply: reply.presence, responded_at: Time.current)
+      device.grant_break!(minutes)
+    end
+    RelockDeviceJob.set(wait_until: device.unlock_until).perform_later(device.id)
+    true
+  end
+
+  # 管理者が却下する（返信つき）
+  def deny!(reply: nil)
+    return false unless status == "pending"
+    update!(status: "denied", reply: reply.presence, responded_at: Time.current)
+  end
+
+  # kind ごとの既定解除分数（画面の初期選択に使う）
+  def default_minutes
+    DEFAULT_MINUTES.fetch(kind, 10)
   end
 
   # 期限が来た pending を期限切れにする（ExpireBreakRequestJob から呼ぶ）
@@ -69,11 +98,17 @@ class BreakRequest < ApplicationRecord
     end
   end
 
-  # ロック画面の該当端末だけに、今の状態を Turbo Streams で送る（再読み込みしない）
-  def refresh_lock_screen
+  # ロック画面（端末）と管理画面の両方を Turbo Streams で更新する（再読み込みしない）
+  def refresh_screens
+    # 端末のロック画面：リクエスト欄だけ差し替え
     broadcast_replace_to [device, :lock],
                          target: "lock_request_zone",
                          partial: "lock/request_zone",
+                         locals: { device: device }
+    # 管理画面：この端末のカードを差し替え（承認待ちの表示が出る）
+    broadcast_replace_to "admin",
+                         target: ActionView::RecordIdentifier.dom_id(device),
+                         partial: "admin/device",
                          locals: { device: device }
   end
 end

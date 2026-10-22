@@ -8,6 +8,14 @@ Rails.application.routes.draw do
       collection do
         post :lock_all
         post :unlock_all
+        post :update_lock_screen # 全員の lock_title / lock_buttons を一括設定
+      end
+    end
+    # 休憩リクエストの承認・却下
+    resources :break_requests, only: [] do
+      member do
+        patch :approve
+        patch :deny
       end
     end
   end

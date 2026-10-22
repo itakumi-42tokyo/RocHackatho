@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BreakRequestTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @device = Device.create!(name: "テスト端末")
   end
@@ -63,6 +65,47 @@ class BreakRequestTest < ActiveSupport::TestCase
     assert_includes BreakRequest.open, req
     req.update_column(:expires_at, 1.minute.ago)
     refute_includes BreakRequest.open, req
+  end
+
+  test "approve! は承認し、端末に一時解除を与え、再ロックジョブを予約する" do
+    device = Device.create!(name: "承認", locked: true)
+    req = device.break_requests.create!(kind: "break")
+
+    assert_enqueued_with(job: RelockDeviceJob) do
+      assert req.approve!(minutes: 15)
+    end
+
+    assert_equal "approved", req.status
+    assert_equal 15, req.unlock_minutes
+    assert req.responded_at.present?
+    assert device.reload.unlock_until&.future?
+    refute device.effective_locked?, "承認直後は一時解除されている"
+  end
+
+  test "approve! のプリセット外の分数は kind の既定に丸める" do
+    req = @device.break_requests.create!(kind: "toilet")
+    req.approve!(minutes: 999) # プリセット外
+    assert_equal 5, req.unlock_minutes # toilet の既定
+  end
+
+  test "deny! は却下して返信を残す" do
+    req = @device.break_requests.create!(kind: "break")
+    assert req.deny!(reply: "あとで")
+    assert_equal "denied", req.status
+    assert_equal "あとで", req.reply
+  end
+
+  test "pending 以外は approve!/deny! できない" do
+    req = @device.break_requests.create!(kind: "break")
+    req.update!(status: "cancelled")
+    refute req.approve!(minutes: 10)
+    refute req.deny!(reply: "x")
+  end
+
+  test "default_minutes は kind ごと" do
+    assert_equal 5, BreakRequest.new(kind: "toilet").default_minutes
+    assert_equal 10, BreakRequest.new(kind: "break").default_minutes
+    assert_equal 10, BreakRequest.new(kind: "custom").default_minutes
   end
 
   test "expire_due_for は期限切れの pending だけ expired にする" do

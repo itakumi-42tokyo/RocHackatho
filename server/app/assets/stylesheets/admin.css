@@ -42,3 +42,20 @@ select, input[type="text"] {
   background: var(--color-surface);
   color: var(--color-text);
 }
+
+/* 承認待ちリクエストの操作欄 */
+.request-box { background: var(--color-surface); border-color: var(--color-accent); gap: var(--space-2); }
+.request-reply { flex: 1; min-width: 7rem; }
+.request-approve, .request-deny { flex-wrap: wrap; }
+
+.bulk-lock-screen { margin-bottom: var(--space-4); }
+.bulk-lock-screen summary { cursor: pointer; }
+.bulk-lock-screen form { margin-top: var(--space-3); flex-wrap: wrap; }
+
+/* iPhone など狭い画面でも押しやすく */
+@media (max-width: 480px) {
+  .admin-header { flex-wrap: wrap; gap: var(--space-2); }
+  .device-grid { grid-template-columns: 1fr; }
+  .button, select, input[type="text"] { min-height: 40px; }
+  .cluster { flex-wrap: wrap; }
+}
