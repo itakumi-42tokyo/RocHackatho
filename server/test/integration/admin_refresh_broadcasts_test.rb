@@ -61,6 +61,20 @@ class AdminRefreshBroadcastsTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "見た目が変わらない更新（last_seen_at のみ）では配信しない" do
+    device = Device.create!(name: "A")
+    assert_turbo_stream_broadcasts "admin", count: 0 do
+      device.update!(last_seen_at: Time.current)   # ハートビート相当
+    end
+  end
+
+  test "status が変わると配信する" do
+    device = Device.create!(name: "A", status: "online")
+    assert_turbo_stream_broadcasts "admin" do
+      device.update!(status: "offline")
+    end
+  end
+
   test "取り消しで admin に refresh が配信される" do
     device = Device.create!(name: "A", locked: true)
     req = device.break_requests.create!(kind: "break")

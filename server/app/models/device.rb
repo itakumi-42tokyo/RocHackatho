@@ -43,8 +43,16 @@ class Device < ApplicationRecord
   scope :jailbreakers, -> { where("escape_count > 0").order(escape_count: :desc) }
   scope :fastest_escapes, -> { where.not(best_escape_seconds: nil).order(best_escape_seconds: :asc) }
 
-  # 管理画面は Turbo 8 のページリフレッシュ（morph）で更新する（個別の replace/append はしない）
-  after_commit         -> { broadcast_refresh_to "admin" }
+  # 管理画面の見た目に関わる列。これが変わったときだけリフレッシュを配信する
+  # （last_seen_at・connection_id のような見た目に出ない更新では配信しない）
+  ADMIN_VISIBLE_COLUMNS = %w[
+    name status locked lock_mode opacity lock_message lock_title lock_buttons
+    unlock_until escape_count best_escape_seconds client_id
+  ].freeze
+
+  # 管理画面は Turbo 8 のページリフレッシュ（morph）で更新する（個別の replace/append はしない）。
+  # 見た目が変わるときだけ配信する（ハートビートのたびに全体を取り直さない）
+  after_commit         -> { broadcast_refresh_to "admin" }, if: :admin_visible_change?
   # 端末（Android）へは従来どおり個別に状態を送る（ちらつきを避ける）
   after_update_commit  :push_state_to_device, if: :device_facing_change?
 
@@ -162,6 +170,11 @@ class Device < ApplicationRecord
   end
 
   private
+
+  # 管理画面の見た目に関わる変更があったか（削除も含む）
+  def admin_visible_change?
+    destroyed? || (saved_changes.keys & ADMIN_VISIBLE_COLUMNS).any?
+  end
 
   # Android の画面に関わる変更があったか（文言・ボタンの一括変更や一時解除も含む）
   def device_facing_change?

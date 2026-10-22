@@ -316,6 +316,12 @@ WebSocket のハンドシェイクを curl で送って確認した。
 #### テスト
 - 端末の新規登録・休憩リクエストの作成/承認/却下/取り消しで `"admin"` に refresh が配信されることを統合テストで確認（`after_commit` を発火させるためこのクラスだけ非トランザクション）
 
+#### 🔧 見た目に関わる変更のときだけ配信する
+- 指摘: `after_commit` が全コミットで発火すると、ハートビートの `last_seen_at` 更新などでも管理画面が全体を取り直してしまう（端末数 × 3 秒）
+- 実態: ハートビートは `update_columns`（コールバックを飛ばす）なので元々配信されないが、作りとして危ういので明示的にガードした
+- 対処: `ADMIN_VISIBLE_COLUMNS`（name/status/locked/lock_mode/opacity/lock_message/lock_title/lock_buttons/unlock_until/escape_count/best_escape_seconds/client_id）**が変わったとき＋削除のときだけ** `broadcast_refresh_to "admin"` を配信。`last_seen_at`・`connection_id` だけの更新では配信しない
+- デバウンス: morph の重複当ては **Turbo クライアント側が coalesce** する（全員ロックなどで複数端末が一度に変わっても、実際のページ取得はまとまる）。サーバー側でまとめたい場合は `broadcast_refresh_later_to`（request_id 単位のデバウンス）に替えられるが、同期テストがしにくいため今は即時配信のまま
+
 ---
 
 ## スクリーンショット・写真
