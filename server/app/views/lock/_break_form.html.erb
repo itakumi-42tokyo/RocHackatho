@@ -1,0 +1,17 @@
+<%# locals: device。lock_buttons の各 kind を「リクエスト送信」ボタンにする。
+    custom のときだけ自由入力欄（文字数上限つき）を出す %>
+<div class="lock-buttons">
+  <% device.normalized_buttons.each do |b| %>
+    <% if b["kind"] == "custom" %>
+      <%= form_with url: break_requests_path, scope: :break_request, method: :post, class: "lock-custom-form" do |f| %>
+        <%= f.hidden_field :kind, value: "custom" %>
+        <%= f.text_field :body, maxlength: BreakRequest::BODY_MAX,
+              placeholder: "ひとこと（#{BreakRequest::BODY_MAX}文字まで）", class: "lock-input" %>
+        <%= f.submit b["label"], class: "lock-button" %>
+      <% end %>
+    <% else %>
+      <%= button_to b["label"], break_requests_path,
+            params: { break_request: { kind: b["kind"] } }, class: "lock-button" %>
+    <% end %>
+  <% end %>
+</div>

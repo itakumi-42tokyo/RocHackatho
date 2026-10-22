@@ -12,6 +12,7 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.webkit.CookieManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
@@ -83,6 +84,10 @@ object LockOverlay {
             settings.userAgentString = USER_AGENT
             webViewClient = WebViewClient()
             setBackgroundColor(Color.TRANSPARENT)
+            // サーバーが発行する署名付き Cookie（端末の識別）を保持する。
+            // 初回だけ ?token=… を受け取り、以降は Cookie で端末を特定するため必須。
+            CookieManager.getInstance().setAcceptCookie(true)
+            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
         }
         container.addView(wv, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 
@@ -117,6 +122,7 @@ object LockOverlay {
         handler.removeCallbacks(autoHide)
         val view = root ?: return@onMain
         webView?.stopLoading()
+        CookieManager.getInstance().flush() // 保持した Cookie を確実に残す
         try {
             windowManager(context.applicationContext).removeView(view)
         } catch (e: IllegalArgumentException) {

@@ -1,5 +1,6 @@
 <% data = @device&.lock_screen_data || { title: "未登録", message: "この端末は登録されていません", buttons: [] } %>
 <%= render "lock/screen",
+      device: @device,
       device_name: @device&.name || "未登録",
       title: data[:title],
       message: data[:message].presence || "Tired: writing. Wired: reading.",

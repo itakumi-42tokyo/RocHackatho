@@ -17,8 +17,13 @@ Rails.application.routes.draw do
     resources :devices, only: [:create]
   end
 
-  # Android の WebView が表示するロック画面（トークンで端末を特定）
+  # Android の WebView が表示するロック画面（初回のみトークン、以降は Cookie で端末を特定）
   get "lock" => "lock#show", as: :lock
+
+  # ロック画面からの休憩リクエスト（Cookie 認証 + CSRF）
+  resources :break_requests, only: [:create] do
+    patch :cancel, on: :member
+  end
 
   # 開発用: ロック画面の見た目の確認
   get "lock_preview" => "lock_previews#show", as: :lock_preview

@@ -1,0 +1,24 @@
+<%# locals: device, error:（任意）。承認待ちがあれば状態を、なければ送信フォームを出す。
+    この要素ごと Turbo Streams で差し替えるので、root に id を持たせる %>
+<div id="lock_request_zone">
+  <% error = local_assigns[:error] %>
+  <% if error.present? %>
+    <p class="lock-request-error"><%= error %></p>
+  <% end %>
+
+  <% req = device.open_break_request %>
+  <% if req %>
+    <div class="lock-request">
+      <p class="lock-request-status">リクエスト送信済み・承認待ち</p>
+      <p class="lock-request-label"><%= req.label %></p>
+      <%= button_to "取り消す", cancel_break_request_path(req), method: :patch,
+            class: "lock-button lock-button--ghost" %>
+    </div>
+  <% else %>
+    <% answered = device.break_requests.recent.first %>
+    <% if answered&.reply.present? && %w[approved denied].include?(answered.status) %>
+      <p class="lock-request-reply"><%= answered.reply %></p>
+    <% end %>
+    <%= render "lock/break_form", device: device %>
+  <% end %>
+</div>

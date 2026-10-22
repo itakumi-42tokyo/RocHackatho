@@ -10,7 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_22_060000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_22_070000) do
+  create_table "break_requests", force: :cascade do |t|
+    t.integer "device_id", null: false
+    t.string "kind", null: false
+    t.string "body"
+    t.string "status", default: "pending", null: false
+    t.string "reply"
+    t.integer "unlock_minutes"
+    t.datetime "responded_at"
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["device_id", "status"], name: "index_break_requests_on_device_id_and_status"
+    t.index ["device_id"], name: "index_break_requests_on_device_id"
+  end
+
   create_table "device_events", force: :cascade do |t|
     t.integer "device_id", null: false
     t.string "kind"
@@ -40,5 +55,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_22_060000) do
     t.index ["token"], name: "index_devices_on_token", unique: true
   end
 
+  add_foreign_key "break_requests", "devices"
   add_foreign_key "device_events", "devices"
 end

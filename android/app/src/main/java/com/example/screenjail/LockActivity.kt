@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.WindowManager
+import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -81,6 +82,9 @@ class LockActivity : Activity() {
             // 非ブラウザの UA にすると、ngrok の警告ページを CSS/JS のサブリクエストでも回避できる
             settings.userAgentString = LockOverlay.USER_AGENT
             webViewClient = WebViewClient()
+            // サーバーが発行する署名付き Cookie（端末の識別）を保持する
+            CookieManager.getInstance().setAcceptCookie(true)
+            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
         }
         webView = wv
         setContentView(wv)

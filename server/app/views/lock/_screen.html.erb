@@ -1,9 +1,17 @@
-<%# ロック画面の全体構成。locals: title, message, buttons, device_name, theme %>
+<%# ロック画面の全体構成。locals: title, message, buttons, device_name, theme,
+    device:（実機は Device、プレビューは渡さない） %>
+<% device = local_assigns[:device] %>
 <% content_for :theme, theme %>
 <div class="lock-top">SCREEN JAIL</div>
 <div class="lock-center">
   <%= render "lock/title", title: title %>
   <%= render "lock/message", message: message %>
-  <%= render "lock/buttons", buttons: buttons %>
+  <% if device %>
+    <%# この端末専用のストリームを購読し、リクエストの状態変化を差し替えで反映する（再読み込みしない） %>
+    <%= turbo_stream_from device, :lock %>
+    <%= render "lock/request_zone", device: device %>
+  <% else %>
+    <%= render "lock/buttons", buttons: buttons %>
+  <% end %>
 </div>
 <%= render "lock/footer", device_name: device_name %>

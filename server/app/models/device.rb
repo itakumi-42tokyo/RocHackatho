@@ -1,6 +1,7 @@
 class Device < ApplicationRecord
   has_secure_token
   has_many :device_events, dependent: :destroy
+  has_many :break_requests, dependent: :destroy
 
   LOCK_MODES = %w[overlay pinning full].freeze
   STATUSES = %w[online inactive offline].freeze
@@ -66,6 +67,11 @@ class Device < ApplicationRecord
   def unlock!
     update!(locked: false, locked_at: nil)
     log_event("unlock")
+  end
+
+  # 今この端末が持っている未処理（承認待ち）のリクエスト
+  def open_break_request
+    break_requests.open.order(created_at: :desc).first
   end
 
   def online?  = status == "online"
