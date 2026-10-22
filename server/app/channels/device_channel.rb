@@ -31,7 +31,7 @@ class DeviceChannel < ApplicationCable::Channel
   def report(data)
     return unless current_device
 
-    if current_device.locked? && data["overlay_shown"] == false
+    if current_device.effective_locked? && data["overlay_shown"] == false
       current_device.mark_escaped!
     end
   end
@@ -41,7 +41,7 @@ class DeviceChannel < ApplicationCable::Channel
 
     # この接続が今の接続のときだけ offline にする（古い接続が後から閉じても誤判定しない）
     if current_device.reload.connection_id == @conn_id
-      was_locked = current_device.locked?
+      was_locked = current_device.effective_locked?
       current_device.update!(status: "offline")
       current_device.log_event("offline")
       current_device.mark_escaped! if was_locked

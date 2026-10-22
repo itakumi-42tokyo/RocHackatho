@@ -19,11 +19,11 @@ class DeviceStatusSweepJob < ApplicationJob
 
       next if device.status == new_status
 
-      was_locked = device.locked?
+      was_locked = device.effective_locked? # 一時解除中は脱獄に数えない
       device.update!(status: new_status)
       device.log_event(new_status)
       # ロック中に音信不通 = 脱獄
-      device.mark_escaped! if new_status != "online" && was_locked && new_status == "offline"
+      device.mark_escaped! if was_locked && new_status == "offline"
     end
   end
 end

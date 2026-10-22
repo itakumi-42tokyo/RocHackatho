@@ -39,6 +39,20 @@ class DeviceTest < ActiveSupport::TestCase
     assert_equal 0, @device.unlock_remaining_seconds
   end
 
+  test "一時解除中は脱獄に数えない（mark_escaped! は何もしない）" do
+    @device.update!(locked: true, locked_at: 1.minute.ago, unlock_until: 5.minutes.from_now)
+    assert_no_difference -> { @device.reload.escape_count } do
+      @device.mark_escaped!
+    end
+  end
+
+  test "実効ロック中は脱獄に数える" do
+    @device.update!(locked: true, locked_at: 1.minute.ago, unlock_until: nil)
+    assert_difference -> { @device.reload.escape_count }, 1 do
+      @device.mark_escaped!
+    end
+  end
+
   test "手動 lock! / unlock! は unlock_until を消す（手動操作を優先）" do
     @device.update!(unlock_until: 5.minutes.from_now)
     @device.lock!

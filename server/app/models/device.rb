@@ -121,9 +121,10 @@ class Device < ApplicationRecord
     increment!(:token_generation)
   end
 
-  # ロック中に接続が途絶えた／覆いが外れた = 脱獄
+  # ロック中に接続が途絶えた／覆いが外れた = 脱獄。
+  # 一時解除中（unlock_until が未来）は正当に使えるので数えない（実効ロックで判定）。
   def mark_escaped!
-    return unless locked?
+    return unless effective_locked?
 
     seconds = locked_at ? (Time.current - locked_at).to_i : nil
     self.escape_count += 1
