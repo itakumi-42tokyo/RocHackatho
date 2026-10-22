@@ -343,6 +343,14 @@ WebSocket のハンドシェイクを curl で送って確認した。
 - 整合性の修正: **承認（`grant_break!`）時に `escaped` をクリア**。脱獄中に休憩を承認したとき「⏳一時解除中」と「🚨脱獄中」が同時に出ないようにした（`escaped=true` のまま `effective_locked?=false` になる唯一の抜けを塞いだ）
 - 学び: 「直っていない」の報告は、まず**実データ（イベントログ・DB）とジョブ実行記録**で、ロジックの問題か検証条件の問題かを切り分ける
 
+#### 🐛 連れ戻しが同じ秒に2回 ＝ 同時接続の競合（check-then-act）
+- 症状: 実機ログで `recaptured` が同じ秒に2回。集計すると recaptured 5 > escaped 4
+- 原因: full モードは同じ端末へ複数経路（LockService・アクティビティ・オーバーレイ）で接続する。各経路が同時に「復帰」を報告し、`mark_recaptured!` が **`escaped` を読んでから書く**ため、2つが両方 true を読んでから両方書いて二重記録。脱獄カウントでも同じ競合が起きうる
+- 対処: `mark_escaped!`/`mark_recaptured!` を**条件付きの原子的1回更新**に変更。`where(id:, escaped: false).update_all("escape_count = escape_count + 1, escaped = true …")` の**更新件数が1のときだけ**イベント記録・配信する。SQLite の書き込み直列化で先勝ちの1件だけが当たる
+- テスト: **スレッド2本の同時実行**で「同時報告でも記録は1回」を固定（別コネクションが実データを見られるよう非トランザクション）
+- 学び（レビューにも反映）: **同時接続からの二重処理は、順番どおりのテストでは絶対に出ない。** reviewer はこれを一度見逃した → reviewer の観点に「同時実行・競合（check-then-act）」を追加し、該当時はスレッドテストを要求するようにした
+- 横展開の宿題: 同型の check-then-act が `BreakRequest#approve!/deny!/cancel!` などにも残る（同時承認で二重 grant）。別タスクとして対応予定
+
 ---
 
 ## スクリーンショット・写真

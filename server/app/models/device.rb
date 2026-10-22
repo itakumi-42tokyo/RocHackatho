@@ -162,22 +162,33 @@ class Device < ApplicationRecord
   #   ハートビート（数秒おき）で何度 report が来ても二重に数えない
   def mark_escaped!
     return unless effective_locked?
-    return if escaped?
+    return if escaped? # 速い事前チェック（正しさは下の条件付き更新で担保する）
 
+    # escaped=false の行だけを原子的に true にして数える。
+    # full モードの複数接続が同時に報告しても、更新が当たるのは 1 つだけ（競合でも 1 回）。
+    claimed = self.class.where(id: id, escaped: false)
+                  .update_all(["escaped = ?, escape_count = escape_count + 1, updated_at = ?", true, Time.current])
+    return if claimed.zero?
+
+    reload
     seconds = locked_at ? (Time.current - locked_at).to_i : nil
-    self.escaped = true
-    self.escape_count += 1
-    self.best_escape_seconds = seconds if seconds && (best_escape_seconds.nil? || seconds < best_escape_seconds)
-    save!
-    log_event("escaped", seconds: seconds)
+    if seconds && (best_escape_seconds.nil? || seconds < best_escape_seconds)
+      update_columns(best_escape_seconds: seconds)
+    end
+    log_event("escaped", seconds: seconds) # DeviceEvent 作成 → 管理画面へ refresh（update_all は callback を飛ばすため）
     Rails.logger.info("[jail] device=#{id} escaped! count=#{escape_count}")
   end
 
   # 覆いが戻った／連れ戻された。次に逃げたらまた 1 回数えられるようにする
   def mark_recaptured!
-    return unless escaped?
+    return unless escaped? # 速い事前チェック（正しさは下の条件付き更新で担保する）
 
-    update!(escaped: false)
+    # escaped=true の行だけを原子的に false にする（同時報告でも記録は 1 回）
+    claimed = self.class.where(id: id, escaped: true)
+                  .update_all(["escaped = ?, updated_at = ?", false, Time.current])
+    return if claimed.zero?
+
+    reload
     log_event("recaptured")
     Rails.logger.info("[jail] device=#{id} recaptured")
   end
