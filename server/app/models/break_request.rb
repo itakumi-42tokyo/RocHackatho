@@ -22,7 +22,14 @@ class BreakRequest < ApplicationRecord
 
   # 「まだ処理待ち」= pending かつ期限内。端末が同時に持てるのは 1 件だけ
   scope :open, -> { where(status: "pending").where("expires_at > ?", Time.current) }
+  scope :pending_due, -> { where(status: "pending").where(expires_at: ..Time.current) }
   scope :recent, -> { order(created_at: :desc) }
+
+  # 期限切れの pending をまとめて expired にする。
+  # 作成前に呼んで、部分ユニークインデックス（pending は端末ごと 1 件）と整合させる。
+  def self.expire_due_for(device)
+    device.break_requests.pending_due.update_all(status: "expired", responded_at: Time.current)
+  end
 
   def open?
     status == "pending" && expires_at.present? && expires_at.future?

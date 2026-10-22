@@ -4,9 +4,8 @@ class BreakRequestsControllerTest < ActionDispatch::IntegrationTest
   TURBO = { "Accept" => "text/vnd.turbo-stream.html" }.freeze
 
   setup do
-    # レート制限ストアはプロセス内で共有され、トランザクションのロールバックで
-    # 端末 ID が再利用されるため、テストごとにクリアする
-    BreakRequestsController::RATE_LIMIT_STORE.clear
+    # rate_limit はキャッシュを使い、ロールバックで端末 ID が再利用されるため、テストごとにクリアする
+    Rails.cache.clear
     @device = Device.create!(name: "A")
     @other  = Device.create!(name: "B")
   end

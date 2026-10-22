@@ -240,6 +240,14 @@ WebSocket のハンドシェイクを curl で送って確認した。
 - 対処: `setup` でストアを `clear`。テスト DB は `--skip-test` でも `test.rb` が CSRF を無効化しているのでリクエストテストは素直に書けた
 - 学び: プロセス内キャッシュを使う機能はテスト間の状態リークに注意。キーに使う ID がロールバックで再利用されることも合わせて踏む
 
+#### 🔧 補強（レビューで挙がった 4 点）
+実機で通ったあと、Phase 2 の作りを 4 点見直して固めた。
+- **Cable の Cookie 認証**: Cable 接続の端末識別を token/Bearer だけでなく**署名付き Cookie** にも対応（WebView の Turbo 接続は Cookie を送るため）。識別ロジックは `Device.from_lock_cookie` に集約し、HTTP と Cable で共有
+- **rate_limit の保存先**: テスト用に置いていたプロセス内 `MemoryStore` 定数は、本番の複数プロセスで共有されない。アプリのキャッシュ（本番は `solid_cache` ＝共有）を使うよう変更し、テストだけ `memory_store` に（null_store だと数えられない）
+- **部分ユニークインデックス**: 「1 端末 1 件」をモデル検証だけに頼らず、`where status='pending'` の**部分ユニークインデックス**で DB レベルに保証。作成前に期限切れ pending を expired へ掃除して整合させ、競合時は `RecordNotUnique` を 422 に変換
+- **Cookie のトークン世代**: 署名付き Cookie に `token_generation` を埋め、`rotate_token!`（将来の ANDROID_ID 再登録で使う）で token を回したら**古い Cookie を無効化**できるようにした
+- ハマり: `ActionCable::Connection::TestCase` は署名 Cookie を接続のリクエストに載せない（`request.cookies` が nil）。Cookie 経路の中核は `Device.from_lock_cookie` の単体テストと HTTP 統合テストで担保し、コネクションテストは token と nil に絞った
+
 ---
 
 ## スクリーンショット・写真

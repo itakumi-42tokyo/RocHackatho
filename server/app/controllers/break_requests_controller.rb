@@ -5,17 +5,26 @@ class BreakRequestsController < ApplicationController
 
   before_action :require_lock_device
 
-  # 連打対策はサーバー側で行う（画面側のボタン無効化だけに頼らない）。端末ごとに制限する
-  RATE_LIMIT_STORE = ActiveSupport::Cache::MemoryStore.new
+  # 連打対策はサーバー側で行う（画面側のボタン無効化だけに頼らない）。端末ごとに制限する。
+  # 保存先はアプリのキャッシュ（本番は solid_cache = 複数プロセスで共有）。test は memory_store。
   rate_limit to: 2, within: 10.seconds,
              by: -> { current_lock_device&.id },
              with: -> { rate_limit_exceeded },
-             store: RATE_LIMIT_STORE,
              only: :create
 
   def create
+    # 期限切れの pending を先に片づけてから作る（部分ユニークインデックスと整合させる）
+    BreakRequest.expire_due_for(current_lock_device)
+
     @break_request = current_lock_device.break_requests.new(create_params)
-    saved = @break_request.save
+    saved =
+      begin
+        @break_request.save
+      rescue ActiveRecord::RecordNotUnique
+        # 競合で未処理が二重になりかけたとき（DB の部分ユニークインデックスが弾く）
+        @break_request.errors.add(:base, "すでに承認待ちのリクエストがあります")
+        false
+      end
     if saved
       ExpireBreakRequestJob.set(wait_until: @break_request.expires_at).perform_later(@break_request.id)
     end

@@ -8,9 +8,10 @@ class ApplicationController < ActionController::Base
 
   # 端末を署名付き Cookie に記録する。これ以降トークンは URL に出さない。
   # secure は本番のみ（開発では http でも保持できるようにする）。
+  # id だけでなく token の世代も入れ、token を回転させたら古い Cookie を無効にできるようにする。
   def sign_in_device(device)
     cookies.signed[LOCK_DEVICE_COOKIE] = {
-      value: device.id,
+      value: { "id" => device.id, "gen" => device.token_generation },
       httponly: true,
       secure: Rails.env.production?,
       same_site: :lax
@@ -21,8 +22,7 @@ class ApplicationController < ActionController::Base
   def current_lock_device
     return @current_lock_device if defined?(@current_lock_device)
 
-    id = cookies.signed[LOCK_DEVICE_COOKIE]
-    @current_lock_device = id ? Device.find_by(id: id) : nil
+    @current_lock_device = Device.from_lock_cookie(cookies.signed[LOCK_DEVICE_COOKIE])
   end
 
   # JSON API 用。Authorization: Bearer <token> で端末を特定する

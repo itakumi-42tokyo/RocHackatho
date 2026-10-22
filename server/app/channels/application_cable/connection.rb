@@ -9,10 +9,21 @@ module ApplicationCable
 
     private
 
-    # token は Android が ?token=… かヘッダー Authorization: Bearer … で渡す
+    # ネイティブ（OkHttp）は token、ブラウザ／WebView は署名付き Cookie で端末を特定する。
+    # どちらでもない接続（管理画面など）は current_device を持たない（nil のまま）。
     def find_device
+      device_from_token || device_from_cookie
+    end
+
+    # token は Android が ?token=… かヘッダー Authorization: Bearer … で渡す
+    def device_from_token
       token = request.params[:token].presence || bearer_token
       Device.find_by(token: token) if token.present?
+    end
+
+    # WebView の Turbo 接続は Cookie を送る。HTTP と同じ署名付き Cookie で端末を特定する
+    def device_from_cookie
+      Device.from_lock_cookie(cookies.signed[ApplicationController::LOCK_DEVICE_COOKIE])
     end
 
     def bearer_token

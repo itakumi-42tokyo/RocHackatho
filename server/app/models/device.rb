@@ -17,6 +17,16 @@ class Device < ApplicationRecord
   validates :opacity, inclusion: { in: 0..100 }
 
   scope :recent, -> { order(created_at: :desc) }
+
+  # 署名付き Cookie（{ "id" =>, "gen" => }）から端末を取り出す。
+  # token の世代が一致しないときは無効（token 回転で古い Cookie を弾く）。
+  def self.from_lock_cookie(data)
+    return nil unless data.is_a?(Hash)
+
+    data = data.symbolize_keys
+    device = find_by(id: data[:id])
+    device if device && device.token_generation == data[:gen]
+  end
   scope :jailbreakers, -> { where("escape_count > 0").order(escape_count: :desc) }
   scope :fastest_escapes, -> { where.not(best_escape_seconds: nil).order(best_escape_seconds: :asc) }
 
@@ -79,6 +89,12 @@ class Device < ApplicationRecord
 
   def log_event(kind, extra = {})
     device_events.create!(kind: kind, payload: extra)
+  end
+
+  # token を回転させ世代を上げる（ANDROID_ID 再登録などで古い token・Cookie を無効にする）
+  def rotate_token!
+    regenerate_token
+    increment!(:token_generation)
   end
 
   # ロック中に接続が途絶えた／覆いが外れた = 脱獄
