@@ -27,6 +27,19 @@ class Device < ApplicationRecord
     device = find_by(id: data[:id])
     device if device && device.token_generation == data[:gen]
   end
+
+  # 端末登録。client_id（ANDROID_ID）があれば同じ端末として扱い、token を作り直す
+  # （再インストールでも別端末にならない。古い token は無効になる＝なりすまし対策）。
+  def self.register!(client_id:, name:)
+    name = name.presence || "名無し端末"
+    if client_id.present? && (device = find_by(client_id: client_id))
+      device.rotate_token!
+      device.update!(name: name)
+      device
+    else
+      create!(client_id: client_id.presence, name: name)
+    end
+  end
   scope :jailbreakers, -> { where("escape_count > 0").order(escape_count: :desc) }
   scope :fastest_escapes, -> { where.not(best_escape_seconds: nil).order(best_escape_seconds: :asc) }
 
@@ -89,8 +102,8 @@ class Device < ApplicationRecord
   end
 
   def lock!(mode: nil, opacity: nil, message: nil)
-    # 手動ロックは一時解除より優先する（残っている unlock_until は消す）
-    attrs = { locked: true, locked_at: Time.current, unlock_until: nil }
+    # 手動ロックは一時解除より優先する（残っている unlock_until は消す）。新しいロックなので escaped もリセット
+    attrs = { locked: true, locked_at: Time.current, unlock_until: nil, escaped: false }
     attrs[:lock_mode] = mode if mode.present?
     attrs[:opacity] = opacity if opacity
     attrs[:lock_message] = message if message
@@ -99,7 +112,7 @@ class Device < ApplicationRecord
   end
 
   def unlock!
-    update!(locked: false, locked_at: nil, unlock_until: nil)
+    update!(locked: false, locked_at: nil, unlock_until: nil, escaped: false)
     log_event("unlock")
   end
 
@@ -122,15 +135,29 @@ class Device < ApplicationRecord
   end
 
   # ロック中に接続が途絶えた／覆いが外れた = 脱獄。
-  # 一時解除中（unlock_until が未来）は正当に使えるので数えない（実効ロックで判定）。
+  # ・一時解除中（unlock_until が未来）は正当に使えるので数えない（実効ロックで判定）
+  # ・「ロック中 → 逃げた」の状態変化 1 回につき 1 回だけ数える（escaped フラグ）。
+  #   ハートビート（数秒おき）で何度 report が来ても二重に数えない
   def mark_escaped!
     return unless effective_locked?
+    return if escaped?
 
     seconds = locked_at ? (Time.current - locked_at).to_i : nil
+    self.escaped = true
     self.escape_count += 1
     self.best_escape_seconds = seconds if seconds && (best_escape_seconds.nil? || seconds < best_escape_seconds)
     save!
     log_event("escaped", seconds: seconds)
+    Rails.logger.info("[jail] device=#{id} escaped! count=#{escape_count}")
+  end
+
+  # 覆いが戻った／連れ戻された。次に逃げたらまた 1 回数えられるようにする
+  def mark_recaptured!
+    return unless escaped?
+
+    update!(escaped: false)
+    log_event("recaptured")
+    Rails.logger.info("[jail] device=#{id} recaptured")
   end
 
   private

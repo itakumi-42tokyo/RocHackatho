@@ -43,6 +43,25 @@ select, input[type="text"] {
   color: var(--color-text);
 }
 
+/* 承認待ち件数バナー */
+.pending-banner {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  text-align: center;
+}
+.pending-banner--active {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.device-id { font-size: var(--text-sm); font-weight: 400; }
+.device-client { font-size: var(--text-sm); }
+
 /* 承認待ちリクエストの操作欄 */
 .request-box { background: var(--color-surface); border-color: var(--color-accent); gap: var(--space-2); }
 .request-reply { flex: 1; min-width: 7rem; }

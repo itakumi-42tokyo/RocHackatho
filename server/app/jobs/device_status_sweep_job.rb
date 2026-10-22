@@ -22,8 +22,11 @@ class DeviceStatusSweepJob < ApplicationJob
       was_locked = device.effective_locked? # 一時解除中は脱獄に数えない
       device.update!(status: new_status)
       device.log_event(new_status)
-      # ロック中に音信不通 = 脱獄
-      device.mark_escaped! if was_locked && new_status == "offline"
+      # ロック中に音信不通 = 脱獄（mark_escaped! 側で状態変化1回につき1回に抑える）
+      if was_locked && new_status == "offline"
+        Rails.logger.info("[jail] sweep offline device=#{device.id} effective_locked=#{was_locked}")
+        device.mark_escaped!
+      end
     end
   end
 end

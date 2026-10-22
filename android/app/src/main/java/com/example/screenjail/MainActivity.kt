@@ -112,7 +112,7 @@ class MainActivity : Activity() {
         }
 
         status.text = "登録中…"
-        DeviceRegistrar.register(baseUrl, name) { token, error ->
+        DeviceRegistrar.register(baseUrl, name, clientId()) { token, error ->
             if (token != null) {
                 prefs.edit().putString(Prefs.TOKEN, token).apply()
                 LockService.start(this)
@@ -123,6 +123,11 @@ class MainActivity : Activity() {
             }
         }
     }
+
+    // 端末の実体を表す ID。再インストールしても同じ端末として扱うため、サーバーに渡す
+    @android.annotation.SuppressLint("HardwareIds")
+    private fun clientId(): String =
+        Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
 
     private fun updateStatus() {
         val joined = !prefs.getString(Prefs.TOKEN, null).isNullOrBlank()

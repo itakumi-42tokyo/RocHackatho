@@ -1,8 +1,11 @@
 <%= tag.div id: dom_id(device), class: "card device-card stack #{'device-card--locked' if device.effective_locked?}" do %>
   <div class="row">
-    <h3><%= device.name %></h3>
+    <h3><%= device.name %> <span class="muted device-id">#<%= device.id %></span></h3>
     <span class="badge badge--<%= device.status %>"><%= device.status %></span>
   </div>
+  <% if device.client_id.present? %>
+    <div class="muted device-client">端末ID: <%= device.client_id.to_s.last(6) %></div>
+  <% end %>
 
   <div class="row">
     <% if device.effective_locked? %>

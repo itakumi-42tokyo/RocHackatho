@@ -20,6 +20,8 @@
 
 <%= turbo_stream_from "admin" %>
 
+<%= render "admin/pending_banner" %>
+
 <div class="layout-2col">
   <section class="stack">
     <h2>端末（<%= @devices.size %>）</h2>

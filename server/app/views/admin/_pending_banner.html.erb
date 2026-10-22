@@ -1,0 +1,13 @@
+<%# 承認待ちの件数バナー。リクエストの作成・承認・却下・期限切れで差し替えて更新する。
+    Stimulus(pending) がタブのタイトルと新着時の音を受け持つ %>
+<% count = BreakRequest.open.count %>
+<div id="pending_banner"
+     class="pending-banner<%= ' pending-banner--active' if count.positive? %>"
+     data-controller="pending"
+     data-pending-count-value="<%= count %>">
+  <% if count.positive? %>
+    🔔 承認待ち <strong><%= count %></strong> 件
+  <% else %>
+    承認待ちはありません
+  <% end %>
+</div>

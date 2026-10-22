@@ -16,9 +16,10 @@ object DeviceRegistrar {
     private val client = OkHttpClient()
     private val main = Handler(Looper.getMainLooper())
 
-    fun register(baseUrl: String, name: String, onResult: (token: String?, error: String?) -> Unit) {
+    fun register(baseUrl: String, name: String, clientId: String, onResult: (token: String?, error: String?) -> Unit) {
         val url = baseUrl.trimEnd('/') + "/api/devices"
-        val body = FormBody.Builder().add("name", name).build()
+        // client_id（ANDROID_ID）を送ると、再インストールでも同じ端末として扱われる
+        val body = FormBody.Builder().add("name", name).add("client_id", clientId).build()
         val request = Request.Builder()
             .url(url)
             .addHeader("ngrok-skip-browser-warning", "1")

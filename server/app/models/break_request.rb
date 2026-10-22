@@ -110,5 +110,7 @@ class BreakRequest < ApplicationRecord
                          target: ActionView::RecordIdentifier.dom_id(device),
                          partial: "admin/device",
                          locals: { device: device }
+    # 管理画面：承認待ち件数バナーを更新（タブのタイトル・新着音もこれで動く）
+    broadcast_replace_to "admin", target: "pending_banner", partial: "admin/pending_banner"
   end
 end

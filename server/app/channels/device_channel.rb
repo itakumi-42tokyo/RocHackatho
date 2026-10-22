@@ -27,12 +27,21 @@ class DeviceChannel < ApplicationCable::Channel
     end
   end
 
-  # Android が「覆いが実際に出ているか」を報告する。ロック中なのに出ていない = 脱獄
+  # Android が「覆いが実際に出ているか」を報告する。ロック中なのに出ていない = 脱獄。
+  # 接続は長命で current_device は古くなるので、判定前に必ず最新状態を読み直す。
   def report(data)
     return unless current_device
 
-    if current_device.effective_locked? && data["overlay_shown"] == false
+    current_device.reload
+    shown = data["overlay_shown"]
+    Rails.logger.info("[jail] report device=#{current_device.id} overlay_shown=#{shown} effective_locked=#{current_device.effective_locked?} escaped=#{current_device.escaped?}")
+
+    return unless current_device.effective_locked?
+
+    if shown == false
       current_device.mark_escaped!
+    else
+      current_device.mark_recaptured! # 覆いが戻った
     end
   end
 
@@ -44,6 +53,7 @@ class DeviceChannel < ApplicationCable::Channel
       was_locked = current_device.effective_locked?
       current_device.update!(status: "offline")
       current_device.log_event("offline")
+      Rails.logger.info("[jail] unsubscribed device=#{current_device.id} effective_locked=#{was_locked}")
       current_device.mark_escaped! if was_locked
     end
   end

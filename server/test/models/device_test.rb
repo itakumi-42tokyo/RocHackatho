@@ -53,6 +53,49 @@ class DeviceTest < ActiveSupport::TestCase
     end
   end
 
+  test "脱獄は状態変化1回につき1回だけ（ハートビート連打でも増えない）" do
+    @device.update!(locked: true, locked_at: 1.minute.ago, unlock_until: nil, escaped: false)
+    assert_difference -> { @device.reload.escape_count }, 1 do
+      5.times { @device.mark_escaped! } # report が何度来ても +1 のみ
+    end
+    assert @device.reload.escaped?
+  end
+
+  test "recapture すると escaped が戻り、また逃げれば再び数える" do
+    @device.update!(locked: true, locked_at: 1.minute.ago, escaped: false)
+    @device.mark_escaped!
+    @device.mark_recaptured!
+    refute @device.reload.escaped?
+    assert_difference -> { @device.reload.escape_count }, 1 do
+      @device.mark_escaped!
+    end
+  end
+
+  test "register! は client_id が新規なら作成し、同じ client_id なら行を再利用して token を作り直す" do
+    first = nil
+    assert_difference -> { Device.count }, 1 do
+      first = Device.register!(client_id: "same", name: "一回目")
+    end
+    old_token = first.token
+    old_gen = first.token_generation
+
+    again = nil
+    assert_no_difference -> { Device.count } do
+      again = Device.register!(client_id: "same", name: "二回目")
+    end
+    assert_equal first.id, again.id           # 同じ端末（重複行を作らない）
+    refute_equal old_token, again.token        # token を作り直す
+    assert again.token_generation > old_gen    # 世代が上がる＝旧 Cookie も無効
+    assert_equal "二回目", again.name
+  end
+
+  test "register! は client_id 無しなら毎回新規" do
+    assert_difference -> { Device.count }, 2 do
+      Device.register!(client_id: nil, name: "A")
+      Device.register!(client_id: "", name: "B")
+    end
+  end
+
   test "手動 lock! / unlock! は unlock_until を消す（手動操作を優先）" do
     @device.update!(unlock_until: 5.minutes.from_now)
     @device.lock!

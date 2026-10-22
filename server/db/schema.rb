@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_22_100000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_22_110000) do
   create_table "break_requests", force: :cascade do |t|
     t.integer "device_id", null: false
     t.string "kind", null: false
@@ -55,6 +55,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_22_100000) do
     t.json "lock_buttons", default: [{"label" => "休憩したい", "kind" => "break"}, {"label" => "トイレ", "kind" => "toilet"}], null: false
     t.integer "token_generation", default: 0, null: false
     t.datetime "unlock_until"
+    t.boolean "escaped", default: false, null: false
+    t.string "client_id"
+    t.index ["client_id"], name: "index_devices_on_client_id", unique: true
     t.index ["token"], name: "index_devices_on_token", unique: true
   end
 
