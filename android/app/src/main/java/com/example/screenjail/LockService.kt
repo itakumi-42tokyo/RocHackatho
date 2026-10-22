@@ -21,7 +21,7 @@ class LockService : Service(), CableClient.Listener {
     companion object {
         private const val CHANNEL_ID = "screenjail_service"
         private const val NOTE_ID = 1
-        private const val HEARTBEAT_MS = 3000L
+        private const val HEARTBEAT_MS = 30_000L // 30 秒。電池と通信量を抑える（サーバーの死活しきい値もこれに合わせてある）
         private const val SAFETY_AUTO_RELEASE = 180 // 通信断でも最後は戻れるようにする保険（秒）
         private const val TAG = "LockService"
 

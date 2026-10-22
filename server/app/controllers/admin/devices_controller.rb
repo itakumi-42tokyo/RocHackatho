@@ -29,6 +29,20 @@ class Admin::DevicesController < Admin::BaseController
     end
   end
 
+  # 一時解除を延長し、新しい期限に再ロックジョブを予約し直す
+  def extend_unlock
+    device = Device.find(params[:id])
+    device.extend_unlock!(params[:minutes])
+    RelockDeviceJob.set(wait_until: device.unlock_until).perform_later(device.id)
+    respond_back
+  end
+
+  # 今すぐ再ロックする
+  def relock
+    Device.find(params[:id]).relock_now!
+    respond_back
+  end
+
   def lock_all
     Device.find_each { |d| d.lock!(mode: params[:lock_mode].presence) }
     redirect_to admin_root_path
@@ -51,5 +65,15 @@ class Admin::DevicesController < Admin::BaseController
       device.update!(attrs) if attrs.any?
     end
     redirect_to admin_root_path
+  end
+
+  private
+
+  # 画面は broadcast（管理画面の morph リフレッシュ）で更新されるので、ここは何も描かない
+  def respond_back
+    respond_to do |format|
+      format.turbo_stream { head :no_content }
+      format.html { redirect_to admin_root_path }
+    end
   end
 end

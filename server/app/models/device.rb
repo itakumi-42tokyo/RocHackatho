@@ -8,9 +8,9 @@ class Device < ApplicationRecord
   BUTTON_KINDS = %w[break toilet help custom].freeze
   MAX_BUTTONS = 2
 
-  # 死活判定のしきい値（秒）
-  INACTIVE_AFTER = 15
-  OFFLINE_AFTER = 60
+  # 死活判定のしきい値（秒）。ハートビートは 30 秒間隔なので、取りこぼし 1〜3 回を見込んで余裕を持たせる
+  INACTIVE_AFTER = 45
+  OFFLINE_AFTER = 90
 
   validates :name, presence: true
   validates :lock_mode, inclusion: { in: LOCK_MODES }
@@ -84,6 +84,18 @@ class Device < ApplicationRecord
   # unlock_until が変わると device_facing_change? が効いて端末へ状態が送られる（＝解除が届く）。
   def grant_break!(minutes)
     update!(unlock_until: Time.current + minutes.to_i.minutes)
+  end
+
+  # 一時解除を延長する。今の残り時間（未来なら）に足す。足した後の時刻を返す
+  def extend_unlock!(minutes)
+    base = unlock_until&.future? ? unlock_until : Time.current
+    update!(unlock_until: base + minutes.to_i.minutes)
+    unlock_until
+  end
+
+  # 今すぐ再ロックする（一時解除を打ち切る）。locked はそのまま、期限だけ消す
+  def relock_now!
+    update!(unlock_until: nil)
   end
 
   # 今の状態を端末へ送り直す（再ロックの予約ジョブから呼ぶ。列の変更が無くても送る）

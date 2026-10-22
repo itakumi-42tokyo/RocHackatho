@@ -16,7 +16,7 @@ class DeviceChannel < ApplicationCable::Channel
     transmit current_device.state_payload
   end
 
-  # 3 秒ごとに届く生存通知
+  # 30 秒ごとに届く生存通知（ハートビート間隔。死活しきい値もこれに合わせてある）
   def heartbeat(_data = {})
     return unless current_device
 

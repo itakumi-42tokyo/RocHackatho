@@ -5,6 +5,10 @@ Rails.application.routes.draw do
   namespace :admin do
     root "devices#index"
     resources :devices, only: [:update] do
+      member do
+        patch :extend_unlock # 一時解除を延長する
+        patch :relock        # 今すぐ再ロックする
+      end
       collection do
         post :lock_all
         post :unlock_all

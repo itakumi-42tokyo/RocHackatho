@@ -17,4 +17,7 @@ production:
 development:
   device_status_sweep:
     class: DeviceStatusSweepJob
-    schedule: every 5 seconds
+    schedule: every 15 seconds
+  relock_sweep:
+    class: RelockSweepJob
+    schedule: every 15 seconds

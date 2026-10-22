@@ -18,6 +18,15 @@
     <span class="muted">脱獄 <%= device.escape_count %> 回</span>
   </div>
 
+  <%# 一時解除中だけ、延長と今すぐ再ロックを出す %>
+  <% if device.locked? && device.unlock_remaining_seconds.positive? %>
+    <div class="cluster">
+      <%= button_to "+5分", extend_unlock_admin_device_path(device, minutes: 5), method: :patch, class: "button" %>
+      <%= button_to "+10分", extend_unlock_admin_device_path(device, minutes: 10), method: :patch, class: "button" %>
+      <%= button_to "今すぐ再ロック", relock_admin_device_path(device), method: :patch, class: "button button--primary" %>
+    </div>
+  <% end %>
+
   <%# 承認待ちのリクエストがあれば、承認・却下の操作を出す %>
   <% if (req = device.open_break_request) %>
     <div class="card request-box stack">

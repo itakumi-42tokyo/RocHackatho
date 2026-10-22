@@ -96,6 +96,30 @@ class DeviceTest < ActiveSupport::TestCase
     end
   end
 
+  test "extend_unlock! は今の残り時間に足す" do
+    freeze_time do
+      @device.update!(unlock_until: 3.minutes.from_now)
+      @device.extend_unlock!(5)
+      assert_in_delta 8.minutes.from_now, @device.unlock_until, 1.second # 3 + 5
+    end
+  end
+
+  test "extend_unlock! は期限切れ・未設定なら今から足す" do
+    freeze_time do
+      @device.update!(unlock_until: nil)
+      @device.extend_unlock!(10)
+      assert_in_delta 10.minutes.from_now, @device.unlock_until, 1.second
+    end
+  end
+
+  test "relock_now! は unlock_until を消して実効ロックに戻す" do
+    @device.update!(locked: true, unlock_until: 5.minutes.from_now)
+    refute @device.effective_locked?
+    @device.relock_now!
+    assert_nil @device.unlock_until
+    assert @device.effective_locked?
+  end
+
   test "手動 lock! / unlock! は unlock_until を消す（手動操作を優先）" do
     @device.update!(unlock_until: 5.minutes.from_now)
     @device.lock!

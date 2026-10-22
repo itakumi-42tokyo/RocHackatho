@@ -322,6 +322,18 @@ WebSocket のハンドシェイクを curl で送って確認した。
 - 対処: `ADMIN_VISIBLE_COLUMNS`（name/status/locked/lock_mode/opacity/lock_message/lock_title/lock_buttons/unlock_until/escape_count/best_escape_seconds/client_id）**が変わったとき＋削除のときだけ** `broadcast_refresh_to "admin"` を配信。`last_seen_at`・`connection_id` だけの更新では配信しない
 - デバウンス: morph の重複当ては **Turbo クライアント側が coalesce** する（全員ロックなどで複数端末が一度に変わっても、実際のページ取得はまとまる）。サーバー側でまとめたい場合は `broadcast_refresh_later_to`（request_id 単位のデバウンス）に替えられるが、同期テストがしにくいため今は即時配信のまま
 
+### フェーズ 14: 時限ロックの仕上げと運用まわり（フェーズ4・サーバー側）
+サブフェーズごとに実装→テスト→コミット。管理者レビュー（reviewer サブエージェント）を通してから報告する運用に切り替えた。
+
+- **4e 本番の管理者認証ガード**: 本番で `ADMIN_USER`/`ADMIN_PASSWORD` 未設定なら**起動時にエラー**（既定値にフォールバックしない）。開発・テストは `admin`/`admin`。`fetch_admin_credential` に切り出してテスト可能に
+- **4b 再接続時の取りこぼし防止**: `DeviceChannel#subscribed` が購読直後に現在の状態を transmit することをチャンネルテストで固定（切断中に変わった状態も再購読で追いつく）
+- **4d 再ロックの取りこぼしスイープ**: 予約ジョブが失われても拾えるよう `RelockSweepJob`（15秒毎）を追加。`RelockDeviceJob` は「期限切れなら `unlock_until` を消して確定／延長中なら状態を送るだけ」に整理 ＝ grant 時の予約・延長時の再予約・スイープの三層
+- **4c 延長・手動再ロック**: 管理カードに「+5分／+10分／今すぐ再ロック」。延長は残り時間に足して再ロックジョブを予約し直す。手動再ロックは `unlock_until` を消すだけ（locked・escaped・locked_at はそのまま＝同一ロックセッションの再開）
+- **4a ハートビート 30 秒化**: 3秒→30秒で電池・通信量を削減。死活しきい値を `INACTIVE_AFTER=45`／`OFFLINE_AFTER=90`、sweep を 15 秒に合わせた（取りこぼし1〜3回を見込む）。※Android 再ビルド要
+
+#### レビュー運用の導入
+- CLAUDE.md に「選択肢の提示前・フェーズ完了報告前・コミット前に reviewer サブエージェントへ計画・差分・テスト結果を渡して判定をもらう」を追加（`.claude/agents/reviewer.md`）。報告には判定・条件・人間が確認すべきことをそのまま載せる
+
 ---
 
 ## スクリーンショット・写真
